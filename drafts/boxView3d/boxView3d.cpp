@@ -25,6 +25,9 @@ Project homepage: http://code.google.com/p/ehci/
 #include <stdio.h>      // Header file for standard file i/o.
 #include <stdlib.h>     // Header file for malloc/free.
 
+#define MEANWINDOW 5
+double headHist[MEANWINDOW];
+
 //#define CV_HAAR_FIND_BIGGEST_OBJECT
 
 
@@ -113,7 +116,7 @@ void detect_and_draw( IplImage* img )
         {{255,0,255}}
     };
 
-    double scale = 1.1;
+    double scale = 2.0;
     IplImage* gray = cvCreateImage( cvSize(img->width,img->height), 8, 1 );
     IplImage* small_img = cvCreateImage( cvSize( cvRound (img->width/scale),
                          cvRound (img->height/scale)),
@@ -129,8 +132,8 @@ void detect_and_draw( IplImage* img )
     {
         double t = (double)cvGetTickCount();
         CvSeq* faces = cvHaarDetectObjects( small_img, cascade, storage,
-                                            1.1, 2, CV_HAAR_FIND_BIGGEST_OBJECT,
-                                            cvSize(30, 30) );
+                                            1.2, 2, CV_HAAR_FIND_BIGGEST_OBJECT,
+                                            cvSize(40, 40) );
         t = (double)cvGetTickCount() - t;
         printf( "detection time = %gms\n", t/((double)cvGetTickFrequency()*1000.) );
         for( i = 0; i < (faces ? faces->total : 0); i++ )
@@ -153,12 +156,18 @@ void detect_and_draw( IplImage* img )
 	    
 	    double angle = (r->width)*scale * horizontalGradesPerPixel * 3.141592654/180;
 	    headDist = (headWidth/2) / (tan(angle/2)); //in meters
+	    for(int i=MEANWINDOW-1;i>0;i--)
+		headHist[i]=headHist[i-1];
+	    headHist[0]=headDist;
+	    double headMean=0;
+	    for(int i=0;i<MEANWINDOW;i++) headMean+=headHist[i];
+	    headDist=headMean/MEANWINDOW;
 	    double xAngle = ((img->width)/2.0 - ((r->x+r->width*0.5)*scale)) * horizontalGradesPerPixel * 3.141592654/180;
 	    headX =  tan(xAngle) * headDist;
 	    double yAngle = ((img->height)/2.0 -((r->y+r->height*0.5)*scale)) * verticalGradesPerPixel * 3.141592654/180;
 	    headY = tan(yAngle) * headDist;
 	    printf("HeadX = %.4lfm HeadY = %.4lfm HeadZ = %.4lfm pix %lf\n",headX,headY,headDist,(img->width)/2.0 - ((r->x+r->width*0.5)*scale));
-
+	    
 
 
 /*	    headX = center.x;
@@ -168,7 +177,7 @@ void detect_and_draw( IplImage* img )
         }
     }
 
-    //    cvShowImage( "result", img );
+    cvShowImage( "result", img );
     cvReleaseImage( &gray );
     cvReleaseImage( &small_img );
 }
@@ -349,7 +358,10 @@ void ReSizeGLScene(GLsizei Width, GLsizei Height)
 void DrawGLScene(void)
 {
   //cvrelated
+        double t = (double)cvGetTickCount();
+        
   if( capture ){
+
     if( !cvGrabFrame( capture ))
       return;//break;
     frame = cvRetrieveFrame( capture );
@@ -590,6 +602,9 @@ printf("Head x = %lf Head y = %lf\n",normX,normY);
 
     // since this is double buffered, swap the buffers to display what just got drawn.
     glutSwapBuffers();
+
+	t = (double)cvGetTickCount() - t;
+        printf( "            frame time = %gms\n", t/((double)cvGetTickFrequency()*1000.) );
 }
 
 
@@ -759,7 +774,7 @@ int cvInit(int argc,char** argv){
     else
         capture = cvCaptureFromAVI( input_name ); 
 
-    //    cvNamedWindow( "result", 1 );
+    cvNamedWindow( "result", 1 );
 
 }
 
