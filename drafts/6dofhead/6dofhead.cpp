@@ -1,16 +1,7 @@
-/* Demo of modified Lucas-Kanade optical flow algorithm.
-   See the printf below */
-
-#ifdef _CH_
-#pragma package <opencv>
-#endif
-
-#ifndef _EiC
 #include "cv.h"
 #include "highgui.h"
 #include <stdio.h>
 #include <ctype.h>
-#endif
 
 #include <vector>
 
@@ -106,9 +97,9 @@ int main( int argc, char** argv )
             "\tn - switch the \"night\" mode on/off\n"
             "To add/remove a feature point click it\n" );
 
-    cvNamedWindow( "LkDemo", 0 );
+    cvNamedWindow( "6dofHead", 0 );
     //cvNamedWindow( "Harris", 0 );
-    cvSetMouseCallback( "LkDemo", on_mouse, 0 );
+    cvSetMouseCallback( "6dofHead", on_mouse, 0 );
     int gCount = 0;
     for(;;)
     {	
@@ -396,7 +387,7 @@ modelPoints.push_back(cvPoint3D32f(cubeSize, cubeSize, cubeSize));*/
 
 
 
-        cvShowImage( "LkDemo", image );
+        cvShowImage( "6dofHead", image );
 
         c = cvWaitKey(10);
         if( (char)c == 27 )
@@ -422,11 +413,8 @@ modelPoints.push_back(cvPoint3D32f(cubeSize, cubeSize, cubeSize));*/
     }
 
     cvReleaseCapture( &capture );
-    cvDestroyWindow("LkDemo");
+    cvDestroyWindow("6dofHead");
 
     return 0;
 }
 
-#ifdef _EiC
-main(1,"lkdemo.c");
-#endif
