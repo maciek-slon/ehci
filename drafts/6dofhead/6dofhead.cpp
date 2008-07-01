@@ -30,7 +30,7 @@ CvVect32f translation_vector = new float[3];
 float vertices[4719];
 int model=0;
 
-	float theta = 3.1415;
+	float theta = 0;//3.1415;
 /*	float myRot[] = { 1,  0,  0,  			translation_vector[0],
 	               0, cos(theta),  -sin(theta),  	translation_vector[1],
 	               0, sin(theta),   cos(theta),  	translation_vector[2],
@@ -44,10 +44,11 @@ float myRoty[] = { cos(theta),   0,  sin(theta),   0,
 	         -sin(theta),   0,   cos(theta),  0,
 	               0,  0,  0,  1 };
 
-float gama = 3.1415;
-float myRotz[] = { cos(gama),  -sin(gama),    0,  +30,
-	           sin(gama),   cos(gama),    0,  50,
-	               0, 	0,  	1,  	    +50,
+float gama = 0;//3.1415;
+float dScale = 10.0;
+float myRotz[] = { cos(gama),  -sin(gama),    0,  1.874*dScale,
+	           sin(gama),   cos(gama),    0,  -1.999*dScale,
+	               0, 	0,  	1,  	    -2.643*dScale,
 	               0,  0,  0,  1 };
 
 
@@ -55,9 +56,9 @@ float myRotz[] = { cos(gama),  -sin(gama),    0,  +30,
 
 #define NUMPTS 8
 float scale = 1.0;
-float points3d[NUMPTS][4]={ {0,0,0,1},{100*scale,0,0,1},{75*scale,100*scale,0,1},{25*scale,100*scale,0,1},
-			       {40*scale,40*scale,-10*scale,1},{60*scale,40*scale,-10*scale,1},
-			       {60*scale,60*scale,-10*scale,1},{40*scale,60*scale,-10*scale,1}
+float points3d[NUMPTS][4]={ {0,0,0,1},{100*scale,0,0,1},{75*scale,-100*scale,0,1},{25*scale,-100*scale,0,1},
+			       {40*scale,-40*scale,+100*scale,1},{60*scale,-40*scale,+100*scale,1},
+			       {60*scale,-60*scale,+100*scale,1},{50*scale,-50*scale,+140*scale,1}//{40*scale,60*scale,+100*scale,1}
 };//, {0,0,-50}};//,{60,60,10,1},{40,60,10,1}};*/
 
 struct triangle{
@@ -108,18 +109,20 @@ void loadRaw(char* file){
 //	return;
 	int tcount=0;
 	float mScale= 50.0;
+	float deltaX=1.874,deltaY=-1.999,deltaZ=-2.643;
+	
 	while( fscanf(in,"%f%f%f%f%f%f%f%f%f",&p1[0],&p1[1],&p1[2],&p2[0],&p2[1],&p2[2],&p3[0],&p3[1],&p3[2])!=EOF){
-		triangles[tcount].vert[0][0]=p1[0]*mScale;
-		triangles[tcount].vert[0][1]=p1[1]*mScale;
-		triangles[tcount].vert[0][2]=p1[2]*mScale;
+		triangles[tcount].vert[0][0]=(p1[0]+deltaX)*mScale;
+		triangles[tcount].vert[0][1]=(p1[1]+deltaY)*mScale;
+		triangles[tcount].vert[0][2]=(p1[2]+deltaZ)*mScale;
 
-		triangles[tcount].vert[1][0]=p2[0]*mScale;
-		triangles[tcount].vert[1][1]=p2[1]*mScale;
-		triangles[tcount].vert[1][2]=p2[2]*mScale;
+		triangles[tcount].vert[1][0]=(p2[0]+deltaX)*mScale;
+		triangles[tcount].vert[1][1]=(p2[1]+deltaY)*mScale;
+		triangles[tcount].vert[1][2]=(p2[2]+deltaZ)*mScale;
 
-		triangles[tcount].vert[2][0]=p3[0]*mScale;
-		triangles[tcount].vert[2][1]=p3[1]*mScale;
-		triangles[tcount].vert[2][2]=p3[2]*mScale;
+		triangles[tcount].vert[2][0]=(p3[0]+deltaX)*mScale;
+		triangles[tcount].vert[2][1]=(p3[1]+deltaY)*mScale;
+		triangles[tcount].vert[2][2]=(p3[2]+deltaZ)*mScale;
 
 		tcount++;
 		//printf("Tcount %d\n",tcount);
@@ -154,22 +157,39 @@ glLoadMatrixd( glPositMatrix );
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();				// Reset The Projection Matrix
     
-    gluPerspective(45.0f,(GLfloat)640/(GLfloat)480.0,0.1f,10000.0f);	// Calculate The Aspect Ratio Of The Window
+	//needs to correct the projection so that it works according to camera internal parameters
+    gluPerspective(40.0f,(GLfloat)320/(GLfloat)240.0,0.1f,10000.0f);	// Calculate The Aspect Ratio Of The Window
 
 
 
-    //gluLookAt(0, 0, 0 , 0, 0, 0, 0, 1, 0); //+ 5*headDist
+	//look in +z direction
+    gluLookAt(0, 0, 0 , 0, 0, +1.0, 0, -1, 0); //+ 5*headDist
 
 //    glTranslatef(0.0f,0.0f,0);                  // move z units out from the screen.
 
 
 
+    glBegin(GL_LINES);
+	glColor3f(1.0f,0.0f,0.0);
+	glVertex3f( 0.0f,0.0f,0.0f);
+	glVertex3f( 1000.0f,0.0f,0.0f);	
+    glEnd();
+
 
     glBegin(GL_LINES);
 	glColor3f(0.0f,1.0f,0.0);
-	glVertex3f(0.0f,-1000.0f,0.0f);
-	glVertex3f(0.0f, 1000.0f,0.0f);
+	glVertex3f(0.0f, 0.0f,0.0f);
+	glVertex3f(0.0f, 1000.0f,0.0f);	
     glEnd();
+
+    glBegin(GL_LINES);
+	glColor3f(0.0f,0.0f,1.0);
+	glVertex3f( 0.0f,0.0f,0.0f);
+	glVertex3f( 0.0f,0.0f,1000.0f);	
+    glEnd();
+
+
+
     glBegin(GL_TRIANGLES);
 
 //glVertex3f(-1.0f, -1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
@@ -476,7 +496,7 @@ void openGLCustomInit(int argc, char** argv ){
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_ALPHA | GLUT_DEPTH);  
 
     /* get a 640 x 480 window */
-    glutInitWindowSize(640, 480);  
+    glutInitWindowSize(320, 240);  
 
     /* the window starts at the upper left corner of the screen */
     glutInitWindowPosition(500, 0);  
@@ -644,7 +664,7 @@ void cvLoop(){
 
 	if(count >=NUMPTS){
 		float cubeSize = 100.0;
-		float alturaNariz = -20.0;
+		float alturaNariz = 20.0;
 		std::vector<CvPoint3D32f> modelPoints;
 
 //modelPoints.push_back(cvPoint3D32f(0.0f, 0.0f, 0.0f));
@@ -661,13 +681,13 @@ modelPoints.push_back(cvPoint3D32f(cubeSize, cubeSize, cubeSize));*/
 
 		modelPoints.push_back(cvPoint3D32f(0.0f, 0.0f, 0.0f));
 		modelPoints.push_back(cvPoint3D32f(cubeSize, 0.0f, 0.0f));
-		modelPoints.push_back(cvPoint3D32f((3/4.0)*cubeSize, cubeSize, 0.0f));
-		modelPoints.push_back(cvPoint3D32f((1/4.0)*cubeSize, cubeSize, 0.0f));
+		modelPoints.push_back(cvPoint3D32f((3/4.0)*cubeSize, -cubeSize, 0.0f));
+		modelPoints.push_back(cvPoint3D32f((1/4.0)*cubeSize, -cubeSize, 0.0f));
 
-		modelPoints.push_back(cvPoint3D32f(40.0f, 40.0f, alturaNariz));
-		modelPoints.push_back(cvPoint3D32f(60.0f, 40.0f, alturaNariz));
-		modelPoints.push_back(cvPoint3D32f(40.0f, 60.0f, alturaNariz));
-		modelPoints.push_back(cvPoint3D32f(60.0f, 60.0f, alturaNariz));
+		modelPoints.push_back(cvPoint3D32f(40.0f, -40.0f, alturaNariz));
+		modelPoints.push_back(cvPoint3D32f(60.0f, -40.0f, alturaNariz));
+		modelPoints.push_back(cvPoint3D32f(40.0f, -60.0f, alturaNariz));
+		modelPoints.push_back(cvPoint3D32f(60.0f, -60.0f, alturaNariz));
 /*		modelPoints.push_back(cvPoint3D32f(0.0f, 0.0f, -50.0f));
 
 		modelPoints.push_back(cvPoint3D32f(60.0f, 60.0f, alturaNariz));
@@ -688,7 +708,7 @@ modelPoints.push_back(cvPoint3D32f(cubeSize, cubeSize, cubeSize));*/
 		printf("\n");
 
 		//set posit termination criteria: 100 max iterations, convergence epsilon 1.0e-5
-		CvTermCriteria criteria = cvTermCriteria(CV_TERMCRIT_EPS, 300, 1.0e-4 );
+		CvTermCriteria criteria = cvTermCriteria(CV_TERMCRIT_EPS, 100, 1.0e-5 );
 		FILE* in = fopen("in.txt","r");
 		int myFocus;
 		fscanf(in,"%d",&myFocus);
@@ -751,7 +771,7 @@ glPositMatrix[10] = rotation_matrix[8];
 glPositMatrix[11] = 0.0;
 glPositMatrix[12] =  translation_vector[0];
 glPositMatrix[13] =  translation_vector[1]; 
-glPositMatrix[14] = -translation_vector[2]; //negative
+glPositMatrix[14] =  translation_vector[2]; //negative
 glPositMatrix[15] = 1.0; //homogeneous
 
 	
@@ -820,8 +840,10 @@ glPositMatrix[15] = 1.0; //homogeneous
 		cvMatMul(&Ma,&Mpoints[w],Mr1);
 //		printf("coord %f %f ",cvmGet(&Mpoints[w],0,0),cvmGet(&Mpoints[w],1,0));
 //		printf("coord %f %f\n",cvmGet(Mr1,0,0),cvmGet(Mr1,1,0));
-		cvCircle( image, cvPoint(320+1000*cvmGet(Mr1,0,0)/cvmGet(Mr1,2,0),240+1000*cvmGet(Mr1,1,0)/cvmGet(Mr1,2,0)), 3, CV_RGB(150+30*w,0,0), -1, 8,0);
+		cvCircle( image, cvPoint(320+1000*cvmGet(Mr1,0,0)/cvmGet(Mr1,2,0),240+1000*cvmGet(Mr1,1,0)/cvmGet(Mr1,2,0)), w==0?8:3,w%2==0?CV_RGB(128,0,0): (w==7? CV_RGB(0,0,200) : CV_RGB(200,0,0)), -1, 8,0);
 		printf("new coords %f %f\n",320+1000*cvmGet(Mr1,0,0)/cvmGet(Mr1,2,0),240+1000*cvmGet(Mr1,1,0)/cvmGet(Mr1,2,0));
+		if(w==0) printf("Z(0) = %f\n",cvmGet(Mr1,2,0));
+		if(w==7) printf("Z(7) = %f\n",cvmGet(Mr1,2,0));
 	}
 
 
