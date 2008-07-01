@@ -23,6 +23,7 @@ int window;
 int light;
 
 double glPositMatrix[16];
+double projectionMatrix[16];
 
 IplImage *image = 0, *grey = 0, *prev_grey = 0, *pyramid = 0, *prev_pyramid = 0, *swap_temp;
 CvMatr32f rotation_matrix = new float[9];
@@ -108,7 +109,7 @@ void loadRaw(char* file){
 //	printf("Temp %s %f\n",temp,p1[0]);
 //	return;
 	int tcount=0;
-	float mScale= 50.0;
+	float mScale= 30.0;
 	float deltaX=1.874,deltaY=-1.999,deltaZ=-2.643;
 	
 	while( fscanf(in,"%f%f%f%f%f%f%f%f%f",&p1[0],&p1[1],&p1[2],&p2[0],&p2[1],&p2[2],&p3[0],&p3[1],&p3[2])!=EOF){
@@ -139,6 +140,33 @@ void loadVertices(){
 	fclose(in);
 }
 
+void setProjectionMatrix(){
+	double farPlane=10000.0;
+	double nearPlane=1.0;
+	double width = 320;
+	double height = 240;
+	projectionMatrix[0] = 1000.0/width;
+	projectionMatrix[1] = 0.0;
+	projectionMatrix[2] = 0.0;
+	projectionMatrix[3] = 0.0;
+
+	projectionMatrix[4] = 0.0;
+	projectionMatrix[5] = 1000.0/ height;
+	projectionMatrix[6] = 0.0;
+	projectionMatrix[7] = 0.0;
+	
+	projectionMatrix[8] = 0;
+	projectionMatrix[9] = 0;	
+	projectionMatrix[10] = - 1.0;
+	projectionMatrix[11] = -1.0;
+
+	projectionMatrix[12] = 0.0;
+	projectionMatrix[13] = 0.0;
+	projectionMatrix[14] = -1.0;		
+	projectionMatrix[15] = 0.0;
+
+}
+
 /* The main drawing function. */
 void DrawGLScene(void)
 {  
@@ -156,9 +184,12 @@ glLoadMatrixd( glPositMatrix );
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();				// Reset The Projection Matrix
+	glLoadMatrixd( projectionMatrix );
     
 	//needs to correct the projection so that it works according to camera internal parameters
-    gluPerspective(40.0f,(GLfloat)320/(GLfloat)240.0,0.1f,10000.0f);	// Calculate The Aspect Ratio Of The Window
+
+//    gluPerspective(40.0f,(GLfloat)320/(GLfloat)240.0,0.1f,10000.0f);	// Calculate The Aspect Ratio Of The Window
+//    glOrtho(-1000,+1000,-1000,+1000,0.1f,10000.0f);
 
 
 
@@ -888,6 +919,7 @@ int main( int argc, char** argv )
     loadVertices();
 //    char rawFile[]="head.raw";
     loadRaw("head.raw");//rawFile);
+	setProjectionMatrix();
     if( argc == 1 || (argc == 2 && strlen(argv[1]) == 1 && isdigit(argv[1][0])))
         capture = cvCaptureFromCAM( argc == 2 ? argv[1][0] - '0' : 0 );
     else if( argc == 2 )
