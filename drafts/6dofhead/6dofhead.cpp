@@ -739,10 +739,14 @@ modelPoints.push_back(cvPoint3D32f(cubeSize, cubeSize, cubeSize));*/
 		printf("\n");
 
 		//set posit termination criteria: 100 max iterations, convergence epsilon 1.0e-5
-		CvTermCriteria criteria = cvTermCriteria(CV_TERMCRIT_EPS, 100, 1.0e-5 );
+		//only one of the criteria is used, so, as EPS could get in configurations that 
+		//it wouldnt finish, we have chosen to use the number of iterations
+		CvTermCriteria criteria = cvTermCriteria(CV_TERMCRIT_ITER, 1000, 1.0e-5 );
 		FILE* in = fopen("in.txt","r");
 		int myFocus;
 		fscanf(in,"%d",&myFocus);
+		fclose(in);
+		printf("Right before posit count %d\n",count);
 		cvPOSIT( positObject, &imagePoints[0], myFocus, criteria, rotation_matrix, translation_vector ); 
 		printf("Matrix data\n");
 		for(i=0;i<9;i++){
