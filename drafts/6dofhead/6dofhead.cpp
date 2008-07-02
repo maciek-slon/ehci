@@ -167,6 +167,90 @@ void setProjectionMatrix(){
 
 }
 
+//uses ViolaJones to find head position
+//returns upperHeadCorner, headWidth, and headHeight
+void getHeadPosition(IplImage* frame, CvPoint* upperHeadCorner,int* headWidth,int* headHeight );
+
+static CvHaarClassifierCascade* cascade = 0;
+int cascadeLoaded=0;
+static CvMemStorage* storage = 0;
+
+void detect_and_draw( IplImage* img,CvPoint* upperHeadCorner,int* headWidth,int* headHeight  )
+{
+
+    double scale = 2.0;
+    IplImage *gray, *small_img;
+    int i, j;
+
+    gray = cvCreateImage( cvSize(img->width,img->height), 8, 1 );
+    small_img = cvCreateImage( cvSize( cvRound (img->width/scale),
+                         cvRound (img->height/scale)), 8, 1 );
+
+    cvCvtColor( img, gray, CV_BGR2GRAY );
+    cvResize( gray, small_img, CV_INTER_LINEAR );
+    cvEqualizeHist( small_img, small_img );
+    cvClearMemStorage( storage );
+
+    if( cascade )
+    {
+        double t = (double)cvGetTickCount();
+        CvSeq* faces = cvHaarDetectObjects( small_img, cascade, storage,
+                                            1.2, 2, 0
+                                            |CV_HAAR_FIND_BIGGEST_OBJECT
+                                            //|CV_HAAR_DO_ROUGH_SEARCH
+                                            //|CV_HAAR_DO_CANNY_PRUNING
+                                            //|CV_HAAR_SCALE_IMAGE
+                                            ,
+                                            cvSize(40, 40) );
+        t = (double)cvGetTickCount() - t;
+        printf( "detection time = %gms\n", t/((double)cvGetTickFrequency()*1000.) );
+        for( i = 0; i < (faces ? faces->total : 0); i++ )
+        {
+            CvRect* r = (CvRect*)cvGetSeqElem( faces, i );
+		  *upperHeadCorner= cvPoint(r->x*scale,r->y*scale);
+		  *headWidth=r->width*scale;
+		  *headHeight=r->height*scale;					  	 
+        }
+    }
+
+//    cvShowImage( "result", img );
+    cvReleaseImage( &gray );
+    cvReleaseImage( &small_img );
+}
+
+//loads cascade xml
+void loadCascade(){	
+
+	cascade = (CvHaarClassifierCascade*)cvLoad( "haarcascade_frontalface_default.xml", 0, 0, 0 );
+	if( !cascade ){
+		printf( "ERROR: Could not load classifier cascade\n" );
+	}
+	storage = cvCreateMemStorage(0);
+	cascadeLoaded=1;
+
+}
+void getHeadPosition(IplImage* frame, CvPoint* upperHeadCorner,int* headWidth,int* headHeight ){
+	if(!cascadeLoaded){
+		printf("Cascade not loaded!\n");
+		return;
+	}
+	IplImage *frame_copy = 0;
+	frame_copy = cvCreateImage( cvSize(frame->width,frame->height), IPL_DEPTH_8U, frame->nChannels );
+     cvCopy( frame, frame_copy, 0 );
+	detect_and_draw(frame_copy,upperHeadCorner,headWidth,headHeight);
+
+
+
+	cvRectangle(frame, *upperHeadCorner, cvPoint(upperHeadCorner->x + *headWidth,upperHeadCorner->y + *headHeight), cvScalar(0,0,255), 1);
+
+
+	
+     cvReleaseImage( &frame_copy );
+	
+}
+
+
+
 /* The main drawing function. */
 void DrawGLScene(void)
 {  
@@ -885,9 +969,10 @@ glPositMatrix[15] = 1.0; //homogeneous
 
 
 //	cvReleaseMat(&M);
+	CvPoint upperHeadCorner = cvPoint(0,0);
+	int headWidth, headHeight;
 
-
-
+	getHeadPosition(image, &upperHeadCorner,&headWidth,&headHeight );
 
         cvShowImage( "6dofHead", image );
 
@@ -921,8 +1006,10 @@ int main( int argc, char** argv )
 	
 
     loadVertices();
-//    char rawFile[]="head.raw";
-    loadRaw("head.raw");//rawFile);
+    char rawFile[]="head.raw";
+    loadRaw(rawFile);
+
+	loadCascade();
 	setProjectionMatrix();
     if( argc == 1 || (argc == 2 && strlen(argv[1]) == 1 && isdigit(argv[1][0])))
         capture = cvCaptureFromCAM( argc == 2 ? argv[1][0] - '0' : 0 );
