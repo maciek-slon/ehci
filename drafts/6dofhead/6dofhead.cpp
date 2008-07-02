@@ -18,6 +18,8 @@ GLfloat LightDiffuse[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 /* position of light (x, y, z, (position of light)) */
 GLfloat LightPosition[] = { 0.0f, 2.0f, 0.0f, 1.0f };
 
+int headXNow,headYNow;
+
 /* The number of our GLUT window */
 int window; 
 int light;
@@ -82,6 +84,14 @@ CvCapture* capture = 0;
 
 void cvLoop();
 
+//terminar funcao para inserir novos pontos
+/*
+CvPoint newFeaturePoints[1000];
+int newFeaturePointsCount=0;
+
+void insertFeature(int x, int y){
+	newFeaturePoints
+}*/
 
 void on_mouse( int event, int x, int y, int flags, void* param )
 {
@@ -208,6 +218,8 @@ void detect_and_draw( IplImage* img,CvPoint* upperHeadCorner,int* headWidth,int*
         {
             CvRect* r = (CvRect*)cvGetSeqElem( faces, i );
 		  *upperHeadCorner= cvPoint(r->x*scale,r->y*scale);
+		  headXNow=r->x*scale;
+		  headYNow=r->y*scale;
 		  *headWidth=r->width*scale;
 		  *headHeight=r->height*scale;					  	 
         }
@@ -551,6 +563,10 @@ void keyPressed(unsigned char key, int x, int y)
     case 'm':
             model ^= 1;
 	break;
+	case 'w':
+			count=0;
+			gCount=0;
+ 		break;
     case 76: 
     case 108: // switch the lighting.
 	printf("L/l pressed; light is: %d\n", light);
@@ -653,15 +669,16 @@ void cvLoop(){
         int i, k, c;
 	gCount++;
 	if(gCount>=30 && gCount <=30+NUMPTS-1){
-		int source = 200;
-		if(gCount==30) on_mouse(CV_EVENT_LBUTTONDOWN,source    ,source,0,NULL);
-		if(gCount==31) on_mouse(CV_EVENT_LBUTTONDOWN,source+100,source,0,NULL);
-		if(gCount==32) on_mouse(CV_EVENT_LBUTTONDOWN,source +75,source+100,0,NULL);
-		if(gCount==33) on_mouse(CV_EVENT_LBUTTONDOWN,source +25,source+100,0,NULL);
-		if(gCount==34) on_mouse(CV_EVENT_LBUTTONDOWN,source +40,source +40,0,NULL);
-		if(gCount==35) on_mouse(CV_EVENT_LBUTTONDOWN,source +60,source +40,0,NULL);
-		if(gCount==36) on_mouse(CV_EVENT_LBUTTONDOWN,source +60,source +60,0,NULL);
-		if(gCount==37) on_mouse(CV_EVENT_LBUTTONDOWN,source +40,source +60,0,NULL);
+		int source = headXNow+50,sourcey=headYNow+50;
+		
+		if(gCount==30) on_mouse(CV_EVENT_LBUTTONDOWN,source    ,sourcey,0,NULL);
+		if(gCount==31) on_mouse(CV_EVENT_LBUTTONDOWN,source+100,sourcey,0,NULL);
+		if(gCount==32) on_mouse(CV_EVENT_LBUTTONDOWN,source +75,sourcey+100,0,NULL);
+		if(gCount==33) on_mouse(CV_EVENT_LBUTTONDOWN,source +25,sourcey+100,0,NULL);
+		if(gCount==34) on_mouse(CV_EVENT_LBUTTONDOWN,source +40,sourcey +40,0,NULL);
+		if(gCount==35) on_mouse(CV_EVENT_LBUTTONDOWN,source +60,sourcey +40,0,NULL);
+		if(gCount==36) on_mouse(CV_EVENT_LBUTTONDOWN,source +60,sourcey +60,0,NULL);
+		if(gCount==37) on_mouse(CV_EVENT_LBUTTONDOWN,source +40,sourcey +60,0,NULL);
 
 	}
 
@@ -768,6 +785,8 @@ void cvLoop(){
             count = k;
         }
 
+	   
+
         if( add_remove_pt && count < MAX_COUNT )
         {
             points[1][count++] = cvPointTo32f(pt);
@@ -822,10 +841,8 @@ modelPoints.push_back(cvPoint3D32f(cubeSize, cubeSize, cubeSize));*/
 		}
 		printf("\n");
 
-		//set posit termination criteria: 100 max iterations, convergence epsilon 1.0e-5
-		//only one of the criteria is used, so, as EPS could get in configurations that 
-		//it wouldnt finish, we have chosen to use the number of iterations
-		CvTermCriteria criteria = cvTermCriteria(CV_TERMCRIT_ITER, 1000, 1.0e-5 );
+		//set posit termination criteria: 1000 max iterations, convergence epsilon 1.0e-5
+		CvTermCriteria criteria = cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 1000, 1.0e-5 );
 		FILE* in = fopen("in.txt","r");
 		int myFocus;
 		fscanf(in,"%d",&myFocus);
