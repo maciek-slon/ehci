@@ -801,6 +801,63 @@ void getPositMatrix(){
 
 }
 
+void insertDefaultPoints(IplImage* grey,int headX,int headY){
+
+	count=0;
+
+	points[0][count++] = cvPointTo32f( cvPoint(headX     , headY) );
+	points[0][count++] = cvPointTo32f( cvPoint(headX+100 , headY) );
+	points[0][count++] = cvPointTo32f( cvPoint(headX+ 75 , headY+100) );
+	points[0][count++] = cvPointTo32f( cvPoint(headX+ 25 , headY+100) );
+	points[0][count++] = cvPointTo32f( cvPoint(headX+ 40 , headY +40) );
+	points[0][count++] = cvPointTo32f( cvPoint(headX+ 60 , headY +40) );
+	points[0][count++] = cvPointTo32f( cvPoint(headX+ 60 , headY +60) );
+	points[0][count++] = cvPointTo32f( cvPoint(headX+ 40 , headY +60) );
+     cvFindCornerSubPix( grey, points[0] , 8,
+				     cvSize(win_size,win_size), cvSize(-1,-1),
+					cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS,20,0.03));
+}
+
+void insertNewPoints(IplImage* grey, int headX,int headY,int width, int height){
+
+
+IplImage *result;
+// set ROI, you may use following two funs:
+cvSetImageROI( grey, cvRect( headX, headY, width, height ));
+
+// sub-image
+result = cvCreateImage( cvSize(width, height), grey->depth, grey->nChannels );
+cvCopy(grey,result);
+cvResetImageROI(grey); // release image ROI
+
+
+
+            IplImage* eig = cvCreateImage( cvGetSize(result), 32, 1 );
+            IplImage* temp = cvCreateImage( cvGetSize(result), 32, 1 );
+
+
+            double quality = 0.01;
+            double min_distance = 5;
+
+            count = MAX_COUNT;
+            cvGoodFeaturesToTrack( result, eig, temp, points[0], &count,
+                                   quality, min_distance, 0, 3, 0, 0.04 );	    	  
+            cvFindCornerSubPix( result, points[0], count,
+            cvSize(win_size,win_size), cvSize(-1,-1),
+            cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS,20,0.03));
+            cvReleaseImage( &eig );
+            cvReleaseImage( &temp );
+
+
+
+for(int i=0;i<count;i++){
+	CvPoint pt = cvPointFrom32f(points[0][i]);
+	points[0][i] = cvPoint2D32f(pt.x+headX,pt.y+headY);
+}
+
+
+}
+
 void cvLoop(){
 
         IplImage* frame = 0;
@@ -857,22 +914,11 @@ void cvLoop(){
 	}*/
 
 	if(gCount==30){
-		//getNewPoints();
-		count=0;
-		int headX = upperHeadCorner.x+50, headY = upperHeadCorner.y+50;
-
-		points[0][count++] = cvPointTo32f( cvPoint(headX     , headY) );
-		points[0][count++] = cvPointTo32f( cvPoint(headX+100 , headY) );
-		points[0][count++] = cvPointTo32f( cvPoint(headX+ 75 , headY+100) );
-		points[0][count++] = cvPointTo32f( cvPoint(headX+ 25 , headY+100) );
-		points[0][count++] = cvPointTo32f( cvPoint(headX+ 40 , headY +40) );
-		points[0][count++] = cvPointTo32f( cvPoint(headX+ 60 , headY +40) );
-		points[0][count++] = cvPointTo32f( cvPoint(headX+ 60 , headY +60) );
-		points[0][count++] = cvPointTo32f( cvPoint(headX+ 40 , headY +60) );
-            cvFindCornerSubPix( grey, points[0] , 8,
-                cvSize(win_size,win_size), cvSize(-1,-1),
-                cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS,20,0.03));
-		
+		insertDefaultPoints(grey,upperHeadCorner.x+50,upperHeadCorner.y+50);		
+/*		printf("Head x %d head y %d width %d height %d\n",upperHeadCorner.x,upperHeadCorner.y,headWidth,headHeight);
+		if((upperHeadCorner.x>=0)&&(upperHeadCorner.y>=0)&&
+			(upperHeadCorner.x+headWidth< cvGetSize(grey).width) && (upperHeadCorner.y+headHeight< cvGetSize(grey).height))
+		insertNewPoints(grey,upperHeadCorner.x+30,upperHeadCorner.y+30,headWidth-60,headHeight-60);		*/
 	}
 
 
@@ -892,27 +938,18 @@ void cvLoop(){
             IplImage* eig = cvCreateImage( cvGetSize(grey), 32, 1 );
             IplImage* temp = cvCreateImage( cvGetSize(grey), 32, 1 );
 
-	    printf("Corner detection\n");
-	    IplImage* harrisResult = cvCreateImage(cvGetSize(frame),IPL_DEPTH_32F, 1);//cvCloneImage(image);
-	    printf("iplgrey %d iplharris %d IPL_DEPTH_8U %d\n",grey->depth,harrisResult->depth,IPL_DEPTH_8U);
-	    cvCornerHarris(grey, harrisResult,9,7,0.01);
-//	    cvShowImage( "Harris", harrisResult );
-
-
 
             double quality = 0.01;
             double min_distance = 5;
 
             count = MAX_COUNT;
             cvGoodFeaturesToTrack( grey, eig, temp, points[1], &count,
-                                   quality, min_distance, 0, 3, 0, 0.04 );
-	    cvShowImage("Harris",eig);
+                                   quality, min_distance, 0, 3, 0, 0.04 );	    	  
             cvFindCornerSubPix( grey, points[1], count,
                 cvSize(win_size,win_size), cvSize(-1,-1),
                 cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS,20,0.03));
             cvReleaseImage( &eig );
             cvReleaseImage( &temp );
-	    cvReleaseImage( &harrisResult);
 
 	    
 
