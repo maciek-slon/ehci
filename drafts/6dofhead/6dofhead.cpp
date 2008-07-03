@@ -565,7 +565,7 @@ void keyPressed(unsigned char key, int x, int y)
 	break;
 	case 'w':
 			count=0;
-			gCount=0;
+			gCount=29;
  		break;
     case 76: 
     case 108: // switch the lighting.
@@ -663,37 +663,154 @@ void openGLCustomInit(int argc, char** argv ){
 
 }
 
+void plot2dModel(){
+
+	float a[] = {  rotation_matrix[0],  rotation_matrix[1],  rotation_matrix[2], translation_vector[0],
+	               rotation_matrix[3],  rotation_matrix[4],  rotation_matrix[5], translation_vector[1],
+	               rotation_matrix[6],  rotation_matrix[7],  rotation_matrix[8], translation_vector[2],
+	               0,  0,  1,  0 };
+
+
+	float pos[] = {0,0,0};
+
+	CvMat Ma = cvMat(4, 4, CV_32FC1, a);
+	
+	int w;
+	CvMat Mpoints[NUMPTS];
+
+	for(w=0;w<NUMPTS;w++){
+		Mpoints[w] = cvMat( 4, 1, CV_32FC1,&points3d[w]);
+	}
+
+	CvMat* Mr1 =  cvCreateMat(4,1,CV_32FC1);
+
+	//plotting model
+	if(model){
+		for(int i=0;i<4719/3;i++){
+			float myPoints[4];
+			float scale = 30;
+
+			CvMat Mry = cvMat(4, 4, CV_32FC1, myRoty);
+			CvMat Mrz = cvMat(4, 4, CV_32FC1, myRotz);
+
+			myPoints[0]=scale*vertices[3*i+0];
+			myPoints[1]=scale*vertices[3*i+1];
+			myPoints[2]=scale*vertices[3*i+2];
+			myPoints[3]=1;
+			CvMat temp = cvMat(4,1,CV_32FC1,&myPoints);
+
+			cvMatMul(&Mry,&temp,&temp);
+			cvMatMul(&Mrz,&temp,&temp);
+			cvMatMul(&Ma,&temp,Mr1);
+
+			cvCircle( image, cvPoint(320+1000*cvmGet(Mr1,0,0)/cvmGet(Mr1,2,0),240+1000*cvmGet(Mr1,1,0)/cvmGet(Mr1,2,0)), 3, CV_RGB(0,0,200), -1, 8,0);
+		}		
+		
+	}
+
+
+
+	for(w=0;w<NUMPTS;w++){
+
+		cvMatMul(&Ma,&Mpoints[w],Mr1);
+//		printf("coord %f %f ",cvmGet(&Mpoints[w],0,0),cvmGet(&Mpoints[w],1,0));
+//		printf("coord %f %f\n",cvmGet(Mr1,0,0),cvmGet(Mr1,1,0));
+		cvCircle( image, cvPoint(320+1000*cvmGet(Mr1,0,0)/cvmGet(Mr1,2,0),240+1000*cvmGet(Mr1,1,0)/cvmGet(Mr1,2,0)), w==0?8:3,w%2==0?CV_RGB(128,0,0): (w==7? CV_RGB(0,0,200) : CV_RGB(200,0,0)), -1, 8,0);
+		printf("new coords %f %f\n",320+1000*cvmGet(Mr1,0,0)/cvmGet(Mr1,2,0),240+1000*cvmGet(Mr1,1,0)/cvmGet(Mr1,2,0));
+		if(w==0) printf("Z(0) = %f\n",cvmGet(Mr1,2,0));
+		if(w==7) printf("Z(7) = %f\n",cvmGet(Mr1,2,0));
+	}
+
+}
+
+void updateGlPositMatrix(CvMatr32f rotation_matrix,CvVect32f translation_vector){
+
+	glPositMatrix[0] = rotation_matrix[0];
+	glPositMatrix[1] = rotation_matrix[3];
+	glPositMatrix[2] = rotation_matrix[6];
+	glPositMatrix[3] = 0.0;
+
+	glPositMatrix[4] = rotation_matrix[1];
+	glPositMatrix[5] = rotation_matrix[4];
+	glPositMatrix[6] = rotation_matrix[7];
+
+	glPositMatrix[7] = 0.0;     
+
+	glPositMatrix[8] =  rotation_matrix[2];
+	glPositMatrix[9] =  rotation_matrix[5];
+	glPositMatrix[10] = rotation_matrix[8];
+
+
+	glPositMatrix[11] = 0.0;
+	glPositMatrix[12] =  translation_vector[0];
+	glPositMatrix[13] =  translation_vector[1]; 
+	glPositMatrix[14] =  translation_vector[2]; //negative
+	glPositMatrix[15] = 1.0; //homogeneous
+
+}
+
+void getPositMatrix(){
+
+		float cubeSize = 100.0;
+		float alturaNariz = 20.0;
+		int i;
+		std::vector<CvPoint3D32f> modelPoints;
+
+		modelPoints.push_back(cvPoint3D32f(0.0f, 0.0f, 0.0f));
+		modelPoints.push_back(cvPoint3D32f(cubeSize, 0.0f, 0.0f));
+		modelPoints.push_back(cvPoint3D32f((3/4.0)*cubeSize, -cubeSize, 0.0f));
+		modelPoints.push_back(cvPoint3D32f((1/4.0)*cubeSize, -cubeSize, 0.0f));
+
+		modelPoints.push_back(cvPoint3D32f(40.0f, -40.0f, alturaNariz));
+		modelPoints.push_back(cvPoint3D32f(60.0f, -40.0f, alturaNariz));
+		modelPoints.push_back(cvPoint3D32f(40.0f, -60.0f, alturaNariz));
+		modelPoints.push_back(cvPoint3D32f(60.0f, -60.0f, alturaNariz));
+
+
+		CvPOSITObject *positObject = cvCreatePOSITObject( &modelPoints[0], static_cast<int>(modelPoints.size()) );
+
+		std::vector<CvPoint2D32f> imagePoints;
+
+		for(i=0;i<NUMPTS;i++){
+			CvPoint2D32f point2D;
+		        //The central point is not add because POSIT needs the image point coordinates related to the middle point of the image
+			point2D.x = cvPointFrom32f(points[1][i]).x-320;
+			point2D.y = cvPointFrom32f(points[1][i]).y-240; 
+			imagePoints.push_back( point2D );
+			printf("%f %f\n",point2D.x,point2D.y);
+		}
+		printf("\n");
+
+		//set posit termination criteria: 1000 max iterations, convergence epsilon 1.0e-5
+		CvTermCriteria criteria = cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 1000, 1.0e-5 );
+		FILE* in = fopen("in.txt","r");
+		int myFocus;
+		fscanf(in,"%d",&myFocus);
+		fclose(in);
+		printf("Right before posit count %d\n",count);
+		cvPOSIT( positObject, &imagePoints[0], myFocus, criteria, rotation_matrix, translation_vector ); 
+		printf("Matrix data\n");
+		for(i=0;i<9;i++){
+			printf("%.2f ",rotation_matrix[i]);
+		}
+		for(i=0;i<3;i++){
+			printf("%.2f ",translation_vector[i]);
+		}
+		printf("\n");
+
+
+}
+
 void cvLoop(){
 
         IplImage* frame = 0;
         int i, k, c;
 	gCount++;
-	if(gCount>=30 && gCount <=30+NUMPTS-1){
-		int source = headXNow+50,sourcey=headYNow+50;
-		
-		if(gCount==30) on_mouse(CV_EVENT_LBUTTONDOWN,source    ,sourcey,0,NULL);
-		if(gCount==31) on_mouse(CV_EVENT_LBUTTONDOWN,source+100,sourcey,0,NULL);
-		if(gCount==32) on_mouse(CV_EVENT_LBUTTONDOWN,source +75,sourcey+100,0,NULL);
-		if(gCount==33) on_mouse(CV_EVENT_LBUTTONDOWN,source +25,sourcey+100,0,NULL);
-		if(gCount==34) on_mouse(CV_EVENT_LBUTTONDOWN,source +40,sourcey +40,0,NULL);
-		if(gCount==35) on_mouse(CV_EVENT_LBUTTONDOWN,source +60,sourcey +40,0,NULL);
-		if(gCount==36) on_mouse(CV_EVENT_LBUTTONDOWN,source +60,sourcey +60,0,NULL);
-		if(gCount==37) on_mouse(CV_EVENT_LBUTTONDOWN,source +40,sourcey +60,0,NULL);
 
-	}
 
         frame = cvQueryFrame( capture );
         if( !frame )
             return;
-
-
-
-//IplImage* src = frame1;
-//IplImage* frame = cvCreateImage( cvSize(250,250), 8, 1 );
-
-
-//frame = (IplImage*)cvGetSubRect( (CvMat*)src, (CvMat*)frame, cvRect(160,60,250,250));
-
 
         if( !image )
         {
@@ -715,6 +832,51 @@ void cvLoop(){
 
         if( night_mode )
             cvZero( image );
+
+
+
+
+	CvPoint upperHeadCorner = cvPoint(0,0);
+	int headWidth, headHeight;
+
+	getHeadPosition(image, &upperHeadCorner,&headWidth,&headHeight );
+
+/*
+	if(gCount>=30 && gCount <=30+NUMPTS-1){
+		int source = upperHeadCorner.x+50,sourcey=upperHeadCorner.y+50;
+		
+		if(gCount==30) on_mouse(CV_EVENT_LBUTTONDOWN,source    ,sourcey,0,NULL);
+		if(gCount==31) on_mouse(CV_EVENT_LBUTTONDOWN,source+100,sourcey,0,NULL);
+		if(gCount==32) on_mouse(CV_EVENT_LBUTTONDOWN,source +75,sourcey+100,0,NULL);
+		if(gCount==33) on_mouse(CV_EVENT_LBUTTONDOWN,source +25,sourcey+100,0,NULL);
+		if(gCount==34) on_mouse(CV_EVENT_LBUTTONDOWN,source +40,sourcey +40,0,NULL);
+		if(gCount==35) on_mouse(CV_EVENT_LBUTTONDOWN,source +60,sourcey +40,0,NULL);
+		if(gCount==36) on_mouse(CV_EVENT_LBUTTONDOWN,source +60,sourcey +60,0,NULL);
+		if(gCount==37) on_mouse(CV_EVENT_LBUTTONDOWN,source +40,sourcey +60,0,NULL);
+
+	}*/
+
+	if(gCount==30){
+		//getNewPoints();
+		count=0;
+		int headX = upperHeadCorner.x+50, headY = upperHeadCorner.y+50;
+
+		points[0][count++] = cvPointTo32f( cvPoint(headX     , headY) );
+		points[0][count++] = cvPointTo32f( cvPoint(headX+100 , headY) );
+		points[0][count++] = cvPointTo32f( cvPoint(headX+ 75 , headY+100) );
+		points[0][count++] = cvPointTo32f( cvPoint(headX+ 25 , headY+100) );
+		points[0][count++] = cvPointTo32f( cvPoint(headX+ 40 , headY +40) );
+		points[0][count++] = cvPointTo32f( cvPoint(headX+ 60 , headY +40) );
+		points[0][count++] = cvPointTo32f( cvPoint(headX+ 60 , headY +60) );
+		points[0][count++] = cvPointTo32f( cvPoint(headX+ 40 , headY +60) );
+            cvFindCornerSubPix( grey, points[0] , 8,
+                cvSize(win_size,win_size), cvSize(-1,-1),
+                cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS,20,0.03));
+		
+	}
+
+
+
 
 	if(count>10){
 		for(i=0;i<count;i++){
@@ -797,69 +959,16 @@ void cvLoop(){
         }
 
 	if(count >=NUMPTS){
-		float cubeSize = 100.0;
-		float alturaNariz = 20.0;
-		std::vector<CvPoint3D32f> modelPoints;
-
-//modelPoints.push_back(cvPoint3D32f(0.0f, 0.0f, 0.0f));
-
-/*modelPoints.push_back(cvPoint3D32f(0.0f, 0.0f, cubeSize));
-modelPoints.push_back(cvPoint3D32f(cubeSize, 0.0f, cubeSize));
-modelPoints.push_back(cvPoint3D32f(0.0f, cubeSize, cubeSize));
-modelPoints.push_back(cvPoint3D32f(0.0f, cubeSize, 0.0f));
-
-modelPoints.push_back(cvPoint3D32f(cubeSize, 0.0f, 0.0f));
-modelPoints.push_back(cvPoint3D32f(cubeSize, cubeSize, 0.0f));
-modelPoints.push_back(cvPoint3D32f(cubeSize, cubeSize, cubeSize));*/
-
-
-		modelPoints.push_back(cvPoint3D32f(0.0f, 0.0f, 0.0f));
-		modelPoints.push_back(cvPoint3D32f(cubeSize, 0.0f, 0.0f));
-		modelPoints.push_back(cvPoint3D32f((3/4.0)*cubeSize, -cubeSize, 0.0f));
-		modelPoints.push_back(cvPoint3D32f((1/4.0)*cubeSize, -cubeSize, 0.0f));
-
-		modelPoints.push_back(cvPoint3D32f(40.0f, -40.0f, alturaNariz));
-		modelPoints.push_back(cvPoint3D32f(60.0f, -40.0f, alturaNariz));
-		modelPoints.push_back(cvPoint3D32f(40.0f, -60.0f, alturaNariz));
-		modelPoints.push_back(cvPoint3D32f(60.0f, -60.0f, alturaNariz));
-/*		modelPoints.push_back(cvPoint3D32f(0.0f, 0.0f, -50.0f));
-
-		modelPoints.push_back(cvPoint3D32f(60.0f, 60.0f, alturaNariz));
-		modelPoints.push_back(cvPoint3D32f(40.0f, 60.0f, alturaNariz));*/
-
-		CvPOSITObject *positObject = cvCreatePOSITObject( &modelPoints[0], static_cast<int>(modelPoints.size()) );
-
-		std::vector<CvPoint2D32f> imagePoints;
-
-		for(i=0;i<NUMPTS;i++){
-			CvPoint2D32f point2D;
-		        //The central point is not add because POSIT needs the image point coordinates related to the middle point of the image
-			point2D.x = cvPointFrom32f(points[1][i]).x-320;
-			point2D.y = cvPointFrom32f(points[1][i]).y-240; 
-			imagePoints.push_back( point2D );
-			printf("%f %f\n",point2D.x,point2D.y);
-		}
-		printf("\n");
-
-		//set posit termination criteria: 1000 max iterations, convergence epsilon 1.0e-5
-		CvTermCriteria criteria = cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 1000, 1.0e-5 );
-		FILE* in = fopen("in.txt","r");
-		int myFocus;
-		fscanf(in,"%d",&myFocus);
-		fclose(in);
-		printf("Right before posit count %d\n",count);
-		cvPOSIT( positObject, &imagePoints[0], myFocus, criteria, rotation_matrix, translation_vector ); 
-		printf("Matrix data\n");
-		for(i=0;i<9;i++){
-			printf("%.2f ",rotation_matrix[i]);
-		}
-		for(i=0;i<3;i++){
-			printf("%.2f ",translation_vector[i]);
-		}
-		printf("\n");
-
+		//getPositMatrix uses points[1] obtained from cvCalcOpticalFlowPyrLK
+		getPositMatrix();
+		
+		updateGlPositMatrix(rotation_matrix,translation_vector);	
+		plot2dModel();
+	
 	}
 	printf("Count %d\n",count);
+		
+
 
 
         CV_SWAP( prev_grey, grey, swap_temp );
@@ -867,131 +976,11 @@ modelPoints.push_back(cvPoint3D32f(cubeSize, cubeSize, cubeSize));*/
         CV_SWAP( points[0], points[1], swap_points );
         need_to_init = 0;
 
-//	CvMat* M = cvCreateMat(4,4,CV_32FC1);
-	float theta = 0.0;//3.1415/3;
-/*	float a[] = { 1,  0,  0,  			translation_vector[0],
-	               0, cos(theta),  -sin(theta),  	translation_vector[1],
-	               0, sin(theta),   cos(theta),  	translation_vector[2],
-	               0,  0,  0,  0 };*/
-
-	float a[] = {  rotation_matrix[0],  rotation_matrix[1],  rotation_matrix[2], translation_vector[0],
-	               rotation_matrix[3],  rotation_matrix[4],  rotation_matrix[5], translation_vector[1],
-	               rotation_matrix[6],  rotation_matrix[7],  rotation_matrix[8], translation_vector[2],
-	               0,  0,  1,  0 };
-/*
-for (int f=0; f<3; f++)
-{
-        for (int c=0; c<3; c++)
-        {
-			glPositMatrix[c*4+f] = rotation_matrix[f*3+c];      //transposed
-			
-                
-        }
-}*/
-glPositMatrix[0] = rotation_matrix[0];
-glPositMatrix[1] = rotation_matrix[3];
-glPositMatrix[2] = rotation_matrix[6];
-glPositMatrix[3] = 0.0;
-
-glPositMatrix[4] = rotation_matrix[1];
-glPositMatrix[5] = rotation_matrix[4];
-glPositMatrix[6] = rotation_matrix[7];
-
-glPositMatrix[7] = 0.0;     
-
-glPositMatrix[8] =  rotation_matrix[2];
-glPositMatrix[9] =  rotation_matrix[5];
-glPositMatrix[10] = rotation_matrix[8];
 
 
-glPositMatrix[11] = 0.0;
-glPositMatrix[12] =  translation_vector[0];
-glPositMatrix[13] =  translation_vector[1]; 
-glPositMatrix[14] =  translation_vector[2]; //negative
-glPositMatrix[15] = 1.0; //homogeneous
-
-	
-
-
-	float pos[] = {0,0,0};
-
-	CvMat Ma = cvMat(4, 4, CV_32FC1, a);
-
-	float b[] =   {1, 0, 0,
-			0, 1, 0,
-			0, 0, 1 };
-	CvMat Mb = cvMat(3, 3, CV_32FC1, b);
-	
-	int w;
-	/*for(w=0;w<4;w++){
-		points3d[w][0]= 0;
-		points3d[w][1]= 20*w;
-		points3d[w][2]= 0;
-		
-	}*/
-	//points={ {0,0,0},{100,0,0},{100,-20,0},{0,-20,0}};
-
-
-
-	CvMat Mpoints[NUMPTS];
-
-	for(w=0;w<NUMPTS;w++){
-//		printf("Values %f %f %f",points3d[0],points3d[1],points3d[2]);
-//		printf("Values %f %f %f",points3d[w][0],points3d[w][1],points3d[w][2]);
-//		printf(" pointer %d %d ",points3d,&points3d);
-		Mpoints[w] = cvMat( 4, 1, CV_32FC1,&points3d[w]);
-//		printf("Creating coord %f %f \n",cvmGet(&Mpoints[w],0,0),cvmGet(&Mpoints[w],1,0));
-	}
-
-	CvMat* Mr1 =  cvCreateMat(4,1,CV_32FC1);
-
-	//plotting model
-	if(model){
-		for(int i=0;i<4719/3;i++){
-			float myPoints[4];
-			float scale = 30;
-
-			CvMat Mry = cvMat(4, 4, CV_32FC1, myRoty);
-			CvMat Mrz = cvMat(4, 4, CV_32FC1, myRotz);
-
-			myPoints[0]=scale*vertices[3*i+0];
-			myPoints[1]=scale*vertices[3*i+1];
-			myPoints[2]=scale*vertices[3*i+2];
-			myPoints[3]=1;
-			CvMat temp = cvMat(4,1,CV_32FC1,&myPoints);
-
-			cvMatMul(&Mry,&temp,&temp);
-			cvMatMul(&Mrz,&temp,&temp);
-			cvMatMul(&Ma,&temp,Mr1);
-
-			cvCircle( image, cvPoint(320+1000*cvmGet(Mr1,0,0)/cvmGet(Mr1,2,0),240+1000*cvmGet(Mr1,1,0)/cvmGet(Mr1,2,0)), 3, CV_RGB(0,0,200), -1, 8,0);
-		}		
-		
-	}
-
-
-
-	for(w=0;w<NUMPTS;w++){
-
-		cvMatMul(&Ma,&Mpoints[w],Mr1);
-//		printf("coord %f %f ",cvmGet(&Mpoints[w],0,0),cvmGet(&Mpoints[w],1,0));
-//		printf("coord %f %f\n",cvmGet(Mr1,0,0),cvmGet(Mr1,1,0));
-		cvCircle( image, cvPoint(320+1000*cvmGet(Mr1,0,0)/cvmGet(Mr1,2,0),240+1000*cvmGet(Mr1,1,0)/cvmGet(Mr1,2,0)), w==0?8:3,w%2==0?CV_RGB(128,0,0): (w==7? CV_RGB(0,0,200) : CV_RGB(200,0,0)), -1, 8,0);
-		printf("new coords %f %f\n",320+1000*cvmGet(Mr1,0,0)/cvmGet(Mr1,2,0),240+1000*cvmGet(Mr1,1,0)/cvmGet(Mr1,2,0));
-		if(w==0) printf("Z(0) = %f\n",cvmGet(Mr1,2,0));
-		if(w==7) printf("Z(7) = %f\n",cvmGet(Mr1,2,0));
-	}
-
-
-
-
-//	cvReleaseMat(&M);
-	CvPoint upperHeadCorner = cvPoint(0,0);
-	int headWidth, headHeight;
-
-	getHeadPosition(image, &upperHeadCorner,&headWidth,&headHeight );
 
         cvShowImage( "6dofHead", image );
+
 
         c = cvWaitKey(10);
         if( (char)c == 27 )
