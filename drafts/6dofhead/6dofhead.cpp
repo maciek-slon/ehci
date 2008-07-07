@@ -9,6 +9,8 @@
 #include <GL/gl.h>	// Header File For The OpenGL32 Library
 #include <GL/glu.h>	// Header File For The GLu32 Library
 
+#define READFROMFILE 0
+
 /* white ambient light at half intensity (rgba) */
 GLfloat LightAmbient[] = { 0.5f, 0.5f, 0.5f, 1.0f };
 
@@ -16,7 +18,7 @@ GLfloat LightAmbient[] = { 0.5f, 0.5f, 0.5f, 1.0f };
 GLfloat LightDiffuse[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
 /* position of light (x, y, z, (position of light)) */
-GLfloat LightPosition[] = { 0.0f, 2.0f, 0.0f, 1.0f };
+GLfloat LightPosition[] = { 0.0f, 0.0f, -100.0f, 1.0f };
 
 int headXNow,headYNow;
 
@@ -27,11 +29,19 @@ int light;
 double glPositMatrix[16];
 double projectionMatrix[16];
 
+void updateGlPositMatrix(CvMatr32f rotation_matrix,CvVect32f translation_vector);
+void setInitialRTMatrix();
+
 IplImage *image = 0, *grey = 0, *prev_grey = 0, *pyramid = 0, *prev_pyramid = 0, *swap_temp;
 CvMatr32f rotation_matrix = new float[9];
 CvVect32f translation_vector = new float[3];
 float vertices[4719];
 int model=0;
+
+int refX,refY,refZ;
+int lastHeadW,lastHeadH;
+
+int initialGuess=1;
 
 	float theta = 0;//3.1415;
 /*	float myRot[] = { 1,  0,  0,  			translation_vector[0],
@@ -82,6 +92,12 @@ int add_remove_pt = 0;
 CvPoint pt;
 CvCapture* capture = 0;
 
+
+CvPoint upperHeadCorner = cvPoint(0,0);
+int headWidth, headHeight;
+
+
+
 void cvLoop();
 
 //terminar funcao para inserir novos pontos
@@ -95,7 +111,8 @@ void insertFeature(int x, int y){
 
 void on_mouse( int event, int x, int y, int flags, void* param )
 {
-    if( !image )
+	return;    
+if( !image )
         return;
 
     if( image->origin )
@@ -153,8 +170,8 @@ void loadVertices(){
 void setProjectionMatrix(){
 	double farPlane=10000.0;
 	double nearPlane=1.0;
-	double width = 320;
-	double height = 240;
+	double width = 640;
+	double height = 480;
 	projectionMatrix[0] = 1000.0/width;
 	projectionMatrix[1] = 0.0;
 	projectionMatrix[2] = 0.0;
@@ -213,7 +230,7 @@ void detect_and_draw( IplImage* img,CvPoint* upperHeadCorner,int* headWidth,int*
                                             ,
                                             cvSize(40, 40) );
         t = (double)cvGetTickCount() - t;
-        printf( "detection time = %gms\n", t/((double)cvGetTickFrequency()*1000.) );
+//        printf( "detection time = %gms\n", t/((double)cvGetTickFrequency()*1000.) );
         for( i = 0; i < (faces ? faces->total : 0); i++ )
         {
             CvRect* r = (CvRect*)cvGetSeqElem( faces, i );
@@ -261,276 +278,185 @@ void getHeadPosition(IplImage* frame, CvPoint* upperHeadCorner,int* headWidth,in
 	
 }
 
+void do2dDrawing(){
+
+	/*int XSize = 640, YSize = 480;
+	glMatrixMode (GL_PROJECTION);
+	glLoadIdentity ();
+	glOrtho (0, XSize, YSize, 0, 0, 1);
+	glMatrixMode (GL_MODELVIEW);
+	glBegin(GL_POINTS);
+	glColor3f(1.0f, 1.0f, 1.0f);
+	for(int i=0;i<count;i++)
+		glVertex2f(cvPointFrom32f(points[0][i]).x - upperHeadCorner.x  , cvPointFrom32f(points[0][i]).y - upperHeadCorner.y);
+	glEnd();*/
+
+
+
+
+}
+
 
 
 /* The main drawing function. */
 void DrawGLScene(void)
 {  
     //cvLoop();
-	printf("Drawing\n");
-cvLoop();
-  
+//	printf("Drawing\n");
+
+//  	glClearColor(1.0f,1.0f,1.0f,1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);		// Clear The Screen And The Depth Buffer
     glLoadIdentity();				// Reset The View
 
+	if(initialGuess){
+	
+		setInitialRTMatrix();
+		updateGlPositMatrix(rotation_matrix,translation_vector);	
+	}
+
+
 
 printf("Trans %lf %lf %lf\n",glPositMatrix[12],glPositMatrix[13],glPositMatrix[14]);
-glMatrixMode( GL_MODELVIEW );
-glLoadMatrixd( glPositMatrix );
 
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();				// Reset The Projection Matrix
-	glLoadMatrixd( projectionMatrix );
     
 	//needs to correct the projection so that it works according to camera internal parameters
 
 //    gluPerspective(40.0f,(GLfloat)320/(GLfloat)240.0,0.1f,10000.0f);	// Calculate The Aspect Ratio Of The Window
 //    glOrtho(-1000,+1000,-1000,+1000,0.1f,10000.0f);
 
-
-
 	//look in +z direction
-    gluLookAt(0, 0, 0 , 0, 0, +1.0, 0, -1, 0); //+ 5*headDist
+	if(initialGuess){
+//		initialGuess=1;//turn to false
 
-//    glTranslatef(0.0f,0.0f,0);                  // move z units out from the screen.
+		glMatrixMode( GL_MODELVIEW );
+glLoadIdentity();
+//		glLoadMatrixd( glPositMatrix );
 
+    		glMatrixMode(GL_PROJECTION);
+    		glLoadIdentity();				// Reset The Projection Matrix
 
-
-    glBegin(GL_LINES);
-	glColor3f(1.0f,0.0f,0.0);
-	glVertex3f( 0.0f,0.0f,0.0f);
-	glVertex3f( 1000.0f,0.0f,0.0f);	
-    glEnd();
-
-
-    glBegin(GL_LINES);
-	glColor3f(0.0f,1.0f,0.0);
-	glVertex3f(0.0f, 0.0f,0.0f);
-	glVertex3f(0.0f, 1000.0f,0.0f);	
-    glEnd();
-
-    glBegin(GL_LINES);
-	glColor3f(0.0f,0.0f,1.0);
-	glVertex3f( 0.0f,0.0f,0.0f);
-	glVertex3f( 0.0f,0.0f,1000.0f);	
-    glEnd();
-
-
-
-    glBegin(GL_TRIANGLES);
-
-//glVertex3f(-1.0f, -1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
-  //  glVertex3f( 1.0f, -1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
-   // glVertex3f( 1.0f,  1.0f,  1.0f);	// Top Right Of The Texture and Quad
-
-    for(int i=0;i<3036;i++){
-			glColor3f (i/3036.0, 0.0, 0.0);
-		for(int j=0;j<3;j++){
-			//printf(" Vert %f %f %f\n",triangles[i].vert[j][0],triangles[i].vert[j][1],triangles[i].vert[j][2]-5);
-
-			glVertex3f( triangles[i].vert[j][0],triangles[i].vert[j][1],triangles[i].vert[j][2]);
-		}
-    }
-
-    glEnd();
-
-
- /*   glBegin(GL_QUADS);		                // begin drawing a cube
-    
-    // Front Face (note that the texture's corners have to match the quad's corners)
-    glNormal3f( 0.0f, 0.0f, 1.0f);                              // front face points out of the screen on z.
-    glVertex3f(-1.0f, -1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
-    glVertex3f( 1.0f, -1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
-    glVertex3f( 1.0f,  1.0f,  1.0f);	// Top Right Of The Texture and Quad
-     glVertex3f(-1.0f,  1.0f,  1.0f);	// Top Left Of The Texture and Quad
-  
-    // Back Face
-    glNormal3f( 0.0f, 0.0f,-1.0f);                              // back face points into the screen on z.
-    glTexCoord2f(1.0f, 0.0f); glVertex3f(-1.0f, -1.0f, -1.0f);	// Bottom Right Of The Texture and Quad
-    glTexCoord2f(1.0f, 1.0f); glVertex3f(-1.0f,  1.0f, -1.0f);	// Top Right Of The Texture and Quad
-    glTexCoord2f(0.0f, 1.0f); glVertex3f( 1.0f,  1.0f, -1.0f);	// Top Left Of The Texture and Quad
-    glTexCoord2f(0.0f, 0.0f); glVertex3f( 1.0f, -1.0f, -1.0f);	// Bottom Left Of The Texture and Quad
+		float mScale = 10000;
 	
-    // Top Face
-    glNormal3f( 0.0f, 1.0f, 0.0f);                              // top face points up on y.
-    glTexCoord2f(0.0f, 1.0f); glVertex3f(-1.0f,  1.0f, -1.0f);	// Top Left Of The Texture and Quad
-    glTexCoord2f(0.0f, 0.0f); glVertex3f(-1.0f,  1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
-    glTexCoord2f(1.0f, 0.0f); glVertex3f( 1.0f,  1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
-    glTexCoord2f(1.0f, 1.0f); glVertex3f( 1.0f,  1.0f, -1.0f);	// Top Right Of The Texture and Quad
-    
-    // Bottom Face       
-    glNormal3f( 0.0f, -1.0f, 0.0f);                             // bottom face points down on y. 
-    glTexCoord2f(1.0f, 1.0f); glVertex3f(-1.0f, -1.0f, -1.0f);	// Top Right Of The Texture and Quad
-    glTexCoord2f(0.0f, 1.0f); glVertex3f( 1.0f, -1.0f, -1.0f);	// Top Left Of The Texture and Quad
-    glTexCoord2f(0.0f, 0.0f); glVertex3f( 1.0f, -1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
-    glTexCoord2f(1.0f, 0.0f); glVertex3f(-1.0f, -1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
-    
-    // Right face
-    glNormal3f( 1.0f, 0.0f, 0.0f);                              // right face points right on x.
-    glTexCoord2f(1.0f, 0.0f); glVertex3f( 1.0f, -1.0f, -1.0f);	// Bottom Right Of The Texture and Quad
-    glTexCoord2f(1.0f, 1.0f); glVertex3f( 1.0f,  1.0f, -1.0f);	// Top Right Of The Texture and Quad
-    glTexCoord2f(0.0f, 1.0f); glVertex3f( 1.0f,  1.0f,  1.0f);	// Top Left Of The Texture and Quad
-    glTexCoord2f(0.0f, 0.0f); glVertex3f( 1.0f, -1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
-    
-    // Left Face
-    glNormal3f(-1.0f, 0.0f, 0.0f);                              // left face points left on x.
-    glTexCoord2f(0.0f, 0.0f); glVertex3f(-1.0f, -1.0f, -1.0f);	// Bottom Left Of The Texture and Quad
-    glTexCoord2f(1.0f, 0.0f); glVertex3f(-1.0f, -1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
-    glTexCoord2f(1.0f, 1.0f); glVertex3f(-1.0f,  1.0f,  1.0f);	// Top Right Of The Texture and Quad
-    glTexCoord2f(0.0f, 1.0f); glVertex3f(-1.0f,  1.0f, -1.0f);	// Top Left Of The Texture and Quad
-    
-    glEnd();                                    // done with the polygon.
+		glOrtho(-10*mScale/headWidth*0.05,+10*mScale/headWidth,-9*mScale/headHeight,+10*mScale/headHeight*0.1,-1000.0f,100.0f);
 
-    glTranslatef(-3.0f, 0.0f,0);                  // move z units out from the screen.
 
-    glBegin(GL_QUADS);		                // begin drawing a cube
-    
-    // Front Face (note that the texture's corners have to match the quad's corners)
-    glNormal3f( 0.0f, 0.0f, 1.0f);                              // front face points out of the screen on z.
-    glTexCoord2f(0.0f, 0.0f); glVertex3f(-1.0f, -1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
-    glTexCoord2f(1.0f, 0.0f); glVertex3f( 1.0f, -1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
-    glTexCoord2f(1.0f, 1.0f); glVertex3f( 1.0f,  1.0f,  1.0f);	// Top Right Of The Texture and Quad
-    glTexCoord2f(0.0f, 1.0f); glVertex3f(-1.0f,  1.0f,  1.0f);	// Top Left Of The Texture and Quad
-    
-    // Back Face
-    glNormal3f( 0.0f, 0.0f,-1.0f);                              // back face points into the screen on z.
-    glTexCoord2f(1.0f, 0.0f); glVertex3f(-1.0f, -1.0f, -1.0f);	// Bottom Right Of The Texture and Quad
-    glTexCoord2f(1.0f, 1.0f); glVertex3f(-1.0f,  1.0f, -1.0f);	// Top Right Of The Texture and Quad
-    glTexCoord2f(0.0f, 1.0f); glVertex3f( 1.0f,  1.0f, -1.0f);	// Top Left Of The Texture and Quad
-    glTexCoord2f(0.0f, 0.0f); glVertex3f( 1.0f, -1.0f, -1.0f);	// Bottom Left Of The Texture and Quad
+
+
+
+
+    		glBegin(GL_TRIANGLES);
+
+		for(int i=0;i<3036;i++){
+			//glColor3d ((GLdouble)i/3036.0, 0.0, 0.0);
+			glColor3d (0.0, 0.0, 1.0);
+			
+			for(int j=0;j<3;j++){
+				//printf(" Vert %f %f %f\n",triangles[i].vert[j][0],triangles[i].vert[j][1],triangles[i].vert[j][2]-5);
+
+				glVertex3f( triangles[i].vert[j][0],triangles[i].vert[j][1],triangles[i].vert[j][2]);
+			}
+	    	}
+
+	    glEnd();
+
+		glBegin(GL_LINES);
+
+			glColor3f(1.0f, 1.0f, 1.0f);
+			glVertex3f(0, 0,1.0f);
+			glVertex3f(100, 100,1.0f);
+		glEnd();
+			
+	}
+	else{
+
+		glMatrixMode( GL_MODELVIEW );
+		glLoadMatrixd( glPositMatrix );
+
+    		glMatrixMode(GL_PROJECTION);
+    		glLoadIdentity();				// Reset The Projection Matrix
+		glLoadMatrixd( projectionMatrix );
+
+
+    		gluLookAt(0, 0, 0 , 0, 0, +1.0, 0, -1, 0);   
+
+
+    		glBegin(GL_LINES);
+			glColor3f(1.0f,0.0f,0.0);
+			glVertex3f( 0.0f,0.0f,0.0f);
+			glVertex3f( 1000.0f,0.0f,0.0f);	
+    		glEnd();
+
+
+	    glBegin(GL_LINES);
+		glColor3f(0.0f,1.0f,0.0);
+		glVertex3f(0.0f, 0.0f,0.0f);
+		glVertex3f(0.0f, 1000.0f,0.0f);	
+	    glEnd();
+
+	    glBegin(GL_LINES);
+		glColor3f(0.0f,0.0f,1.0);
+		glVertex3f( 0.0f,0.0f,0.0f);
+		glVertex3f( 0.0f,0.0f,1000.0f);	
+	    glEnd();
+
+
+		//This will translate the first Posit point to the top right part of the head (its origin)
+		//150 is the width of the head (points -2.5 up to 2.5 times 30, which is the modelscale)
+		//180 is the height of the head (points -5.0 up to 1.0 times 30)		
+		glTranslatef( -150.0*(refX-10)/100.0,+180.0*(refY+10)/100.0f, 0.0f);
+
+
+
 	
-    // Top Face
-    glNormal3f( 0.0f, 1.0f, 0.0f);                              // top face points up on y.
-    glTexCoord2f(0.0f, 1.0f); glVertex3f(-1.0f,  1.0f, -1.0f);	// Top Left Of The Texture and Quad
-    glTexCoord2f(0.0f, 0.0f); glVertex3f(-1.0f,  1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
-    glTexCoord2f(1.0f, 0.0f); glVertex3f( 1.0f,  1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
-    glTexCoord2f(1.0f, 1.0f); glVertex3f( 1.0f,  1.0f, -1.0f);	// Top Right Of The Texture and Quad
-    
-    // Bottom Face       
-    glNormal3f( 0.0f, -1.0f, 0.0f);                             // bottom face points down on y. 
-    glTexCoord2f(1.0f, 1.0f); glVertex3f(-1.0f, -1.0f, -1.0f);	// Top Right Of The Texture and Quad
-    glTexCoord2f(0.0f, 1.0f); glVertex3f( 1.0f, -1.0f, -1.0f);	// Top Left Of The Texture and Quad
-    glTexCoord2f(0.0f, 0.0f); glVertex3f( 1.0f, -1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
-    glTexCoord2f(1.0f, 0.0f); glVertex3f(-1.0f, -1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
-    
-    // Right face
-    glNormal3f( 1.0f, 0.0f, 0.0f);                              // right face points right on x.
-    glTexCoord2f(1.0f, 0.0f); glVertex3f( 1.0f, -1.0f, -1.0f);	// Bottom Right Of The Texture and Quad
-    glTexCoord2f(1.0f, 1.0f); glVertex3f( 1.0f,  1.0f, -1.0f);	// Top Right Of The Texture and Quad
-    glTexCoord2f(0.0f, 1.0f); glVertex3f( 1.0f,  1.0f,  1.0f);	// Top Left Of The Texture and Quad
-    glTexCoord2f(0.0f, 0.0f); glVertex3f( 1.0f, -1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
-    
-    // Left Face
-    glNormal3f(-1.0f, 0.0f, 0.0f);                              // left face points left on x.
-    glTexCoord2f(0.0f, 0.0f); glVertex3f(-1.0f, -1.0f, -1.0f);	// Bottom Left Of The Texture and Quad
-    glTexCoord2f(1.0f, 0.0f); glVertex3f(-1.0f, -1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
-    glTexCoord2f(1.0f, 1.0f); glVertex3f(-1.0f,  1.0f,  1.0f);	// Top Right Of The Texture and Quad
-    glTexCoord2f(0.0f, 1.0f); glVertex3f(-1.0f,  1.0f, -1.0f);	// Top Left Of The Texture and Quad
-    
-    glEnd();                                    // done with the polygon.
+//					refX = (int)(px/(1.0*headWidth)*100);
 
-    // 
+		//glTranslatef( (refX - 0.1*lastHeadW*100)*.05, (refY - 0.1*lastHeadH*100)*.05, 0.0f);
+	    glBegin(GL_TRIANGLES);
+		
 
-    glTranslatef(+6.0f, 0.0f,0);                  // move z units out from the screen.
 
-    glBegin(GL_QUADS);		                // begin drawing a cube
-    
-    // Front Face (note that the texture's corners have to match the quad's corners)
-    glNormal3f( 0.0f, 0.0f, 1.0f);                              // front face points out of the screen on z.
-    glTexCoord2f(0.0f, 0.0f); glVertex3f(-1.0f, -1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
-    glTexCoord2f(1.0f, 0.0f); glVertex3f( 1.0f, -1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
-    glTexCoord2f(1.0f, 1.0f); glVertex3f( 1.0f,  1.0f,  1.0f);	// Top Right Of The Texture and Quad
-    glTexCoord2f(0.0f, 1.0f); glVertex3f(-1.0f,  1.0f,  1.0f);	// Top Left Of The Texture and Quad
-    
-    // Back Face
-    glNormal3f( 0.0f, 0.0f,-1.0f);                              // back face points into the screen on z.
-    glTexCoord2f(1.0f, 0.0f); glVertex3f(-1.0f, -1.0f, -1.0f);	// Bottom Right Of The Texture and Quad
-    glTexCoord2f(1.0f, 1.0f); glVertex3f(-1.0f,  1.0f, -1.0f);	// Top Right Of The Texture and Quad
-    glTexCoord2f(0.0f, 1.0f); glVertex3f( 1.0f,  1.0f, -1.0f);	// Top Left Of The Texture and Quad
-    glTexCoord2f(0.0f, 0.0f); glVertex3f( 1.0f, -1.0f, -1.0f);	// Bottom Left Of The Texture and Quad
+
+
+	//glVertex3f(-1.0f, -1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
+	  //  glVertex3f( 1.0f, -1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
+	   // glVertex3f( 1.0f,  1.0f,  1.0f);	// Top Right Of The Texture and Quad
+
+	    for(int i=0;i<3036;i++){
+				//glColor3f (i/3036.0, 0.0, 0.0);
+			glColor3d (0.0, 0.0, 1.0);
+
+
+				float v1x = triangles[i].vert[1][0] - triangles[i].vert[0][0];
+				float v1y = triangles[i].vert[1][1] - triangles[i].vert[0][1];
+				float v1z = triangles[i].vert[1][2] - triangles[i].vert[0][2];
 	
-    // Top Face
-    glNormal3f( 0.0f, 1.0f, 0.0f);                              // top face points up on y.
-    glTexCoord2f(0.0f, 1.0f); glVertex3f(-1.0f,  1.0f, -1.0f);	// Top Left Of The Texture and Quad
-    glTexCoord2f(0.0f, 0.0f); glVertex3f(-1.0f,  1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
-    glTexCoord2f(1.0f, 0.0f); glVertex3f( 1.0f,  1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
-    glTexCoord2f(1.0f, 1.0f); glVertex3f( 1.0f,  1.0f, -1.0f);	// Top Right Of The Texture and Quad
-    
-    // Bottom Face       
-    glNormal3f( 0.0f, -1.0f, 0.0f);                             // bottom face points down on y. 
-    glTexCoord2f(1.0f, 1.0f); glVertex3f(-1.0f, -1.0f, -1.0f);	// Top Right Of The Texture and Quad
-    glTexCoord2f(0.0f, 1.0f); glVertex3f( 1.0f, -1.0f, -1.0f);	// Top Left Of The Texture and Quad
-    glTexCoord2f(0.0f, 0.0f); glVertex3f( 1.0f, -1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
-    glTexCoord2f(1.0f, 0.0f); glVertex3f(-1.0f, -1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
-    
-    // Right face
-    glNormal3f( 1.0f, 0.0f, 0.0f);                              // right face points right on x.
-    glTexCoord2f(1.0f, 0.0f); glVertex3f( 1.0f, -1.0f, -1.0f);	// Bottom Right Of The Texture and Quad
-    glTexCoord2f(1.0f, 1.0f); glVertex3f( 1.0f,  1.0f, -1.0f);	// Top Right Of The Texture and Quad
-    glTexCoord2f(0.0f, 1.0f); glVertex3f( 1.0f,  1.0f,  1.0f);	// Top Left Of The Texture and Quad
-    glTexCoord2f(0.0f, 0.0f); glVertex3f( 1.0f, -1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
-    
-    // Left Face
-    glNormal3f(-1.0f, 0.0f, 0.0f);                              // left face points left on x.
-    glTexCoord2f(0.0f, 0.0f); glVertex3f(-1.0f, -1.0f, -1.0f);	// Bottom Left Of The Texture and Quad
-    glTexCoord2f(1.0f, 0.0f); glVertex3f(-1.0f, -1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
-    glTexCoord2f(1.0f, 1.0f); glVertex3f(-1.0f,  1.0f,  1.0f);	// Top Right Of The Texture and Quad
-    glTexCoord2f(0.0f, 1.0f); glVertex3f(-1.0f,  1.0f, -1.0f);	// Top Left Of The Texture and Quad
-    
-    glEnd();                                    // done with the polygon.
-
-    glTranslatef(0.0f, 0.0f,3.0);                  // move z units out from the screen.
-
-    glBegin(GL_QUADS);		                // begin drawing a cube
-    
-    // Front Face (note that the texture's corners have to match the quad's corners)
-    glNormal3f( 0.0f, 0.0f, 1.0f);                              // front face points out of the screen on z.
-    glTexCoord2f(0.0f, 0.0f); glVertex3f(-1.0f, -1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
-    glTexCoord2f(1.0f, 0.0f); glVertex3f( 1.0f, -1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
-    glTexCoord2f(1.0f, 1.0f); glVertex3f( 1.0f,  1.0f,  1.0f);	// Top Right Of The Texture and Quad
-    glTexCoord2f(0.0f, 1.0f); glVertex3f(-1.0f,  1.0f,  1.0f);	// Top Left Of The Texture and Quad
-    
-    // Back Face
-    glNormal3f( 0.0f, 0.0f,-1.0f);                              // back face points into the screen on z.
-    glTexCoord2f(1.0f, 0.0f); glVertex3f(-1.0f, -1.0f, -1.0f);	// Bottom Right Of The Texture and Quad
-    glTexCoord2f(1.0f, 1.0f); glVertex3f(-1.0f,  1.0f, -1.0f);	// Top Right Of The Texture and Quad
-    glTexCoord2f(0.0f, 1.0f); glVertex3f( 1.0f,  1.0f, -1.0f);	// Top Left Of The Texture and Quad
-    glTexCoord2f(0.0f, 0.0f); glVertex3f( 1.0f, -1.0f, -1.0f);	// Bottom Left Of The Texture and Quad
-	
-    // Top Face
-    glNormal3f( 0.0f, 1.0f, 0.0f);                              // top face points up on y.
-    glTexCoord2f(0.0f, 1.0f); glVertex3f(-1.0f,  1.0f, -1.0f);	// Top Left Of The Texture and Quad
-    glTexCoord2f(0.0f, 0.0f); glVertex3f(-1.0f,  1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
-    glTexCoord2f(1.0f, 0.0f); glVertex3f( 1.0f,  1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
-    glTexCoord2f(1.0f, 1.0f); glVertex3f( 1.0f,  1.0f, -1.0f);	// Top Right Of The Texture and Quad
-    
-    // Bottom Face       
-    glNormal3f( 0.0f, -1.0f, 0.0f);                             // bottom face points down on y. 
-    glTexCoord2f(1.0f, 1.0f); glVertex3f(-1.0f, -1.0f, -1.0f);	// Top Right Of The Texture and Quad
-    glTexCoord2f(0.0f, 1.0f); glVertex3f( 1.0f, -1.0f, -1.0f);	// Top Left Of The Texture and Quad
-    glTexCoord2f(0.0f, 0.0f); glVertex3f( 1.0f, -1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
-    glTexCoord2f(1.0f, 0.0f); glVertex3f(-1.0f, -1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
-    
-    // Right face
-    glNormal3f( 1.0f, 0.0f, 0.0f);                              // right face points right on x.
-    glTexCoord2f(1.0f, 0.0f); glVertex3f( 1.0f, -1.0f, -1.0f);	// Bottom Right Of The Texture and Quad
-    glTexCoord2f(1.0f, 1.0f); glVertex3f( 1.0f,  1.0f, -1.0f);	// Top Right Of The Texture and Quad
-    glTexCoord2f(0.0f, 1.0f); glVertex3f( 1.0f,  1.0f,  1.0f);	// Top Left Of The Texture and Quad
-    glTexCoord2f(0.0f, 0.0f); glVertex3f( 1.0f, -1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
-    
-    // Left Face
-    glNormal3f(-1.0f, 0.0f, 0.0f);                              // left face points left on x.
-    glTexCoord2f(0.0f, 0.0f); glVertex3f(-1.0f, -1.0f, -1.0f);	// Bottom Left Of The Texture and Quad
-    glTexCoord2f(1.0f, 0.0f); glVertex3f(-1.0f, -1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
-    glTexCoord2f(1.0f, 1.0f); glVertex3f(-1.0f,  1.0f,  1.0f);	// Top Right Of The Texture and Quad
-    glTexCoord2f(0.0f, 1.0f); glVertex3f(-1.0f,  1.0f, -1.0f);	// Top Left Of The Texture and Quad
-    
-    glEnd();                                    // done with the polygon.
-*/
+				float v2x = triangles[i].vert[2][0] - triangles[i].vert[0][0];
+				float v2y = triangles[i].vert[2][1] - triangles[i].vert[0][1];
+				float v2z = triangles[i].vert[2][2] - triangles[i].vert[0][2];
+				
+				float nx = v1y*v2z-v2y*v1z;
+				float ny = v1z*v2x-v2z*v1x;
+				float nz = v1x*v2y-v2x*v1y;
+				glEnable(GL_NORMALIZE);
+				glNormal3f( nx,ny,nz);
+				glDisable(GL_NORMALIZE);
 
 
+			for(int j=0;j<3;j++){
+				//printf(" Vert %f %f %f\n",triangles[i].vert[j][0],triangles[i].vert[j][1],triangles[i].vert[j][2]-5);
+				glVertex3f( triangles[i].vert[j][0],triangles[i].vert[j][1],triangles[i].vert[j][2]);
+			}
+	    }
+
+	    glEnd();
+	}
+
+
+
+	do2dDrawing();
     // since this is double buffered, swap the buffers to display what just got drawn.
     glutSwapBuffers();
+	cvLoop();
 }
 
 /* The function called when our window is resized (which shouldn't happen, because we're fullscreen) */
@@ -567,6 +493,10 @@ void keyPressed(unsigned char key, int x, int y)
 			count=0;
 			gCount=29;
  		break;
+	case 'i':
+			initialGuess = !initialGuess;
+			printf("Initial guess now is %d\n",initialGuess);
+			break;
     case 76: 
     case 108: // switch the lighting.
 	printf("L/l pressed; light is: %d\n", light);
@@ -597,8 +527,26 @@ void InitGL(GLsizei Width, GLsizei Height)	// We call this right after our OpenG
     glEnable(GL_DEPTH_TEST);			// Enables Depth Testing
     glShadeModel(GL_SMOOTH);			// Enables Smooth Color Shading
 
-//glPolygonMode(GL_FRONT, GL_LINE);
-//glPolygonMode(GL_BACK, GL_LINE);
+//float specReflection[] = { 0.8f, 0.8f, 0.8f, 1.0f };
+//glMaterialfv(GL_FRONT, GL_SPECULAR, specReflection);
+//glMateriali(GL_FRONT, GL_SHININESS, 96);
+
+
+
+
+
+    glEnable ( GL_COLOR_MATERIAL ) ;
+
+//float colorBlue[] = { 0.0f, 0.0f, 1.0f, 1.0f };
+//glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, colorBlue);
+//glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
+
+
+
+
+
+glPolygonMode(GL_FRONT, GL_LINE);
+glPolygonMode(GL_BACK, GL_LINE);
     
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();				// Reset The Projection Matrix
@@ -608,10 +556,10 @@ void InitGL(GLsizei Width, GLsizei Height)	// We call this right after our OpenG
     glMatrixMode(GL_MODELVIEW);
 
     // set up light number 1.
-    glLightfv(GL_LIGHT1, GL_AMBIENT, LightAmbient);  // add lighting. (ambient)
+//    glLightfv(GL_LIGHT1, GL_AMBIENT, LightAmbient);  // add lighting. (ambient)
     glLightfv(GL_LIGHT1, GL_DIFFUSE, LightDiffuse);  // add lighting. (diffuse).
     glLightfv(GL_LIGHT1, GL_POSITION,LightPosition); // set light position.
-//    glEnable(GL_LIGHT1);                             // turn light 1 on.
+    glEnable(GL_LIGHT1);                             // turn light 1 on.
 //    glEnable(GL_LIGHTING);
 }
 
@@ -627,7 +575,7 @@ void openGLCustomInit(int argc, char** argv ){
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_ALPHA | GLUT_DEPTH);  
 
     /* get a 640 x 480 window */
-    glutInitWindowSize(320, 240);  
+    glutInitWindowSize(640, 480);  
 
     /* the window starts at the upper left corner of the screen */
     glutInitWindowPosition(500, 0);  
@@ -716,9 +664,7 @@ void plot2dModel(){
 //		printf("coord %f %f ",cvmGet(&Mpoints[w],0,0),cvmGet(&Mpoints[w],1,0));
 //		printf("coord %f %f\n",cvmGet(Mr1,0,0),cvmGet(Mr1,1,0));
 		cvCircle( image, cvPoint(320+1000*cvmGet(Mr1,0,0)/cvmGet(Mr1,2,0),240+1000*cvmGet(Mr1,1,0)/cvmGet(Mr1,2,0)), w==0?8:3,w%2==0?CV_RGB(128,0,0): (w==7? CV_RGB(0,0,200) : CV_RGB(200,0,0)), -1, 8,0);
-		printf("new coords %f %f\n",320+1000*cvmGet(Mr1,0,0)/cvmGet(Mr1,2,0),240+1000*cvmGet(Mr1,1,0)/cvmGet(Mr1,2,0));
-		if(w==0) printf("Z(0) = %f\n",cvmGet(Mr1,2,0));
-		if(w==7) printf("Z(7) = %f\n",cvmGet(Mr1,2,0));
+
 	}
 
 }
@@ -749,14 +695,98 @@ void updateGlPositMatrix(CvMatr32f rotation_matrix,CvVect32f translation_vector)
 
 }
 
-void getPositMatrix(){
+void setInitialRTMatrix(){
+
+
+	rotation_matrix[0]=1.0; rotation_matrix[1]=  0; rotation_matrix[2]=  0;
+	rotation_matrix[3]=  0; rotation_matrix[4]=1.0; rotation_matrix[5]=  0;	
+	rotation_matrix[6]=  0; rotation_matrix[7]=  0; rotation_matrix[8]=1.0;
+	
+	translation_vector[0]=   -90;
+	translation_vector[1]=    80;
+	translation_vector[2]=-300.0;
+
+}
+
+std::vector<CvPoint3D32f> modelPoints;
+void getPositMatrix(IplImage* myImage){
 
 		float cubeSize = 100.0;
 		float alturaNariz = 20.0;
+		
 		int i;
-		std::vector<CvPoint3D32f> modelPoints;
 
-		modelPoints.push_back(cvPoint3D32f(0.0f, 0.0f, 0.0f));
+
+
+		std::vector<CvPoint2D32f> imagePoints;
+
+		if(initialGuess) modelPoints.clear();
+		
+		//setInitialRTMatrix();
+		
+		for(int i=0;i<count;i++){
+			float myPixel[4];
+
+			int px = cvPointFrom32f(points[1][i]).x - upperHeadCorner.x ;
+			int py = cvPointFrom32f(points[1][i]).y - upperHeadCorner.y ;
+			int vertIndex = cvRound(3036.0*myPixel[0]);
+			glReadPixels(px,480-py,1,1,GL_RGBA,GL_FLOAT,&myPixel);
+			if(initialGuess){
+				printf("Pixel color %d %d %d %f %f %f %f\n",px,-py,(int)(40*sin(px*3.141593/headWidth)), myPixel[0],myPixel[1],myPixel[2],myPixel[3]);
+				printf("Vertex %f %d Coord %f %f %f headw %d\n",3036.0*myPixel[0], cvRound(3036.0*myPixel[0]),
+
+					(triangles[vertIndex].vert[0][0]/30.0)-1.874,
+					(triangles[vertIndex].vert[0][1]/30.0)+1.999,
+					(triangles[vertIndex].vert[0][2]/30.0)+2.643,headWidth
+				);
+				cvCircle( myImage, cvPoint(20*(4+(triangles[vertIndex].vert[0][0]/30.0)-1.874),
+									  20*(4+(triangles[vertIndex].vert[0][1]/30.0)+1.999)), 3, CV_RGB(0,0,255), -1, 8,0);
+				cvRectangle( myImage, cvPoint(px,py),cvPoint(px+3,py+3),CV_RGB(255,0,0),1);
+
+
+			}
+			//if(vertIndex>0){
+/*				modelPoints.push_back( 	cvPoint3D32f( triangles[vertIndex].vert[0][0],
+									triangles[vertIndex].vert[0][1],
+
+									triangles[vertIndex].vert[0][2]));*/
+			if(initialGuess){
+				if(i==0){
+					refX = (int)(px/(1.0*headWidth)*100);
+					refY = -(int)(py/(1.0*headHeight)*100);
+					refZ = (int)(40*sin(px*3.141593/headWidth));
+					lastHeadW = headWidth;
+					lastHeadH = headHeight;
+				}
+				float cScale = 90;
+				modelPoints.push_back(   cvPoint3D32f( 	(int)(px/(1.0*headWidth)*cScale),
+											    -(int)(py/(1.0*headHeight)*cScale),	
+												(int)(1.1*cScale*sin(px*3.141593/headWidth)) ));
+				//(px<headWidth/2.0)?(int)((headWidth/4.0)*(px/(headWidth/2.0))):(int)((headWidth/4.0)*((headWidth -px)/(1.0*headWidth)))
+
+				CvPoint2D32f point2D;
+				point2D.x = cvPointFrom32f(points[1][i]).x-320;
+				point2D.y = cvPointFrom32f(points[1][i]).y-240;				
+				imagePoints.push_back( point2D );
+				printf("Ip %f %f\n", point2D.x, point2D.y);
+
+			}
+			else if(count==modelPoints.size()){
+				CvPoint2D32f point2D;
+				point2D.x = cvPointFrom32f(points[1][i]).x-320;
+				point2D.y = cvPointFrom32f(points[1][i]).y-240;
+				imagePoints.push_back( point2D );
+				printf("Ip %f %f\n", point2D.x, point2D.y);
+				
+			}
+			
+												
+						
+			//}
+
+		}
+
+/*		modelPoints.push_back(cvPoint3D32f(0.0f, 0.0f, 0.0f));
 		modelPoints.push_back(cvPoint3D32f(cubeSize, 0.0f, 0.0f));
 		modelPoints.push_back(cvPoint3D32f((3/4.0)*cubeSize, -cubeSize, 0.0f));
 		modelPoints.push_back(cvPoint3D32f((1/4.0)*cubeSize, -cubeSize, 0.0f));
@@ -764,31 +794,34 @@ void getPositMatrix(){
 		modelPoints.push_back(cvPoint3D32f(40.0f, -40.0f, alturaNariz));
 		modelPoints.push_back(cvPoint3D32f(60.0f, -40.0f, alturaNariz));
 		modelPoints.push_back(cvPoint3D32f(40.0f, -60.0f, alturaNariz));
-		modelPoints.push_back(cvPoint3D32f(60.0f, -60.0f, alturaNariz));
+		modelPoints.push_back(cvPoint3D32f(60.0f, -60.0f, alturaNariz));*/
+
+		if(modelPoints.size()==count){
+			printf("Creating posit with %d points\n",modelPoints.size());
+			CvPOSITObject *positObject = cvCreatePOSITObject( &modelPoints[0], static_cast<int>(modelPoints.size()) );
 
 
-		CvPOSITObject *positObject = cvCreatePOSITObject( &modelPoints[0], static_cast<int>(modelPoints.size()) );
 
-		std::vector<CvPoint2D32f> imagePoints;
+	/*		for(i=0;i<NUMPTS;i++){
+				CvPoint2D32f point2D;
+				   //The central point is not add because POSIT needs the image point coordinates related to the middle point of the image
+				point2D.x = cvPointFrom32f(points[1][i]).x-320;
+				point2D.y = cvPointFrom32f(points[1][i]).y-240; 
+				imagePoints.push_back( point2D );
+				printf("%f %f\n",point2D.x,point2D.y);
+			}
+			printf("\n");*/
 
-		for(i=0;i<NUMPTS;i++){
-			CvPoint2D32f point2D;
-		        //The central point is not add because POSIT needs the image point coordinates related to the middle point of the image
-			point2D.x = cvPointFrom32f(points[1][i]).x-320;
-			point2D.y = cvPointFrom32f(points[1][i]).y-240; 
-			imagePoints.push_back( point2D );
-			printf("%f %f\n",point2D.x,point2D.y);
+			//set posit termination criteria: 1000 max iterations, convergence epsilon 1.0e-5
+			CvTermCriteria criteria = cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 1000, 1.0e-5 );
+			FILE* in = fopen("in.txt","r");
+			int myFocus;
+			fscanf(in,"%d",&myFocus);
+			fclose(in);
+			cvPOSIT( positObject, &imagePoints[0], myFocus, criteria, rotation_matrix, translation_vector ); 
+			cvReleasePOSITObject (&positObject);
+
 		}
-		printf("\n");
-
-		//set posit termination criteria: 1000 max iterations, convergence epsilon 1.0e-5
-		CvTermCriteria criteria = cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 1000, 1.0e-5 );
-		FILE* in = fopen("in.txt","r");
-		int myFocus;
-		fscanf(in,"%d",&myFocus);
-		fclose(in);
-		printf("Right before posit count %d\n",count);
-		cvPOSIT( positObject, &imagePoints[0], myFocus, criteria, rotation_matrix, translation_vector ); 
 		printf("Matrix data\n");
 		for(i=0;i<9;i++){
 			printf("%.2f ",rotation_matrix[i]);
@@ -797,6 +830,7 @@ void getPositMatrix(){
 			printf("%.2f ",translation_vector[i]);
 		}
 		printf("\n");
+
 
 
 }
@@ -837,23 +871,24 @@ cvResetImageROI(grey); // release image ROI
 
 
             double quality = 0.01;
-            double min_distance = 5;
+            double min_distance = 10;
 
-            count = MAX_COUNT;
+            count = 16;//MAX_COUNT;
             cvGoodFeaturesToTrack( result, eig, temp, points[0], &count,
-                                   quality, min_distance, 0, 3, 0, 0.04 );	    	  
-            cvFindCornerSubPix( result, points[0], count,
+                                   quality, min_distance, 0, 3, 0, 0.04 );	    	
+		  //TODO: ENABLE SUBPIX AFTER TESTS  
+            /*cvFindCornerSubPix( result, points[0], count,
             cvSize(win_size,win_size), cvSize(-1,-1),
-            cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS,20,0.03));
+            cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS,20,0.03));*/
             cvReleaseImage( &eig );
             cvReleaseImage( &temp );
 
 
 
-for(int i=0;i<count;i++){
-	CvPoint pt = cvPointFrom32f(points[0][i]);
-	points[0][i] = cvPoint2D32f(pt.x+headX,pt.y+headY);
-}
+		for(int i=0;i<count;i++){
+			CvPoint pt = cvPointFrom32f(points[0][i]);
+			points[0][i] = cvPoint2D32f(pt.x+headX,pt.y+headY);
+		}
 
 
 }
@@ -865,9 +900,14 @@ void cvLoop(){
 	gCount++;
 
 
+	if(READFROMFILE){
+		frame = cvLoadImage( "head.jpg", 1 );
+	}
+	else{
         frame = cvQueryFrame( capture );
         if( !frame )
             return;
+	}
 
         if( !image )
         {
@@ -893,9 +933,7 @@ void cvLoop(){
 
 
 
-	CvPoint upperHeadCorner = cvPoint(0,0);
-	int headWidth, headHeight;
-
+	
 	getHeadPosition(image, &upperHeadCorner,&headWidth,&headHeight );
 
 /*
@@ -914,11 +952,12 @@ void cvLoop(){
 	}*/
 
 	if(gCount==30){
-		insertDefaultPoints(grey,upperHeadCorner.x+50,upperHeadCorner.y+50);		
-/*		printf("Head x %d head y %d width %d height %d\n",upperHeadCorner.x,upperHeadCorner.y,headWidth,headHeight);
+//		insertDefaultPoints(grey,upperHeadCorner.x+50,upperHeadCorner.y+50);		
+		printf("Head x %d head y %d width %d height %d\n",upperHeadCorner.x,upperHeadCorner.y,headWidth,headHeight);
 		if((upperHeadCorner.x>=0)&&(upperHeadCorner.y>=0)&&
 			(upperHeadCorner.x+headWidth< cvGetSize(grey).width) && (upperHeadCorner.y+headHeight< cvGetSize(grey).height))
-		insertNewPoints(grey,upperHeadCorner.x+30,upperHeadCorner.y+30,headWidth-60,headHeight-60);		*/
+		insertNewPoints(grey,upperHeadCorner.x+(int)(0.25*headWidth),upperHeadCorner.y+(int)(0.25*headHeight),
+											(int)(headWidth*0.5),(int)(headHeight*0.5));		
 	}
 
 
@@ -959,7 +998,7 @@ void cvLoop(){
         {
             cvCalcOpticalFlowPyrLK( prev_grey, grey, prev_pyramid, pyramid,
                 points[0], points[1], count, cvSize(win_size,win_size), 3, status, 0,
-                cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS,20,0.03), flags );
+                cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS,200,0.003), flags );
             flags |= CV_LKFLOW_PYR_A_READY;
             for( i = k = 0; i < count; i++ )
             {
@@ -997,8 +1036,7 @@ void cvLoop(){
 
 	if(count >=NUMPTS){
 		//getPositMatrix uses points[1] obtained from cvCalcOpticalFlowPyrLK
-		getPositMatrix();
-		
+		getPositMatrix(image);
 		updateGlPositMatrix(rotation_matrix,translation_vector);	
 		plot2dModel();
 	
@@ -1065,7 +1103,7 @@ int main( int argc, char** argv )
         return -1;
     }
 
-    cvNamedWindow( "6dofHead", 0 );
+    cvNamedWindow( "6dofHead", 1 );
     //cvNamedWindow( "Harris", 0 );
     cvSetMouseCallback( "6dofHead", on_mouse, 0 );
 
