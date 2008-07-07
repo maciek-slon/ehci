@@ -9,7 +9,7 @@
 #include <GL/gl.h>	// Header File For The OpenGL32 Library
 #include <GL/glu.h>	// Header File For The GLu32 Library
 
-#define READFROMFILE 0
+#define READFROMIMAGEFILE 0
 
 /* white ambient light at half intensity (rgba) */
 GLfloat LightAmbient[] = { 0.5f, 0.5f, 0.5f, 1.0f };
@@ -820,7 +820,7 @@ void getPositMatrix(IplImage* myImage){
 			fclose(in);
 			cvPOSIT( positObject, &imagePoints[0], myFocus, criteria, rotation_matrix, translation_vector ); 
 			cvReleasePOSITObject (&positObject);
-
+			
 		}
 		printf("Matrix data\n");
 		for(i=0;i<9;i++){
@@ -900,7 +900,7 @@ void cvLoop(){
 	gCount++;
 
 
-	if(READFROMFILE){
+	if(READFROMIMAGEFILE){
 		frame = cvLoadImage( "head.jpg", 1 );
 	}
 	else{
