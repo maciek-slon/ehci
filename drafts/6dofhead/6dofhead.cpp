@@ -1,5 +1,6 @@
 #include "cv.h"
 #include "highgui.h"
+#include "ehci.h"
 #include <stdio.h>
 #include <ctype.h>
 #include <vector>
@@ -21,21 +22,16 @@ GLfloat LightDiffuse[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 /* position of light (x, y, z, (position of light)) */
 GLfloat LightPosition[] = { 0.0f, 0.0f, -100.0f, 1.0f };
 
-int headXNow,headYNow;
 
 /* The number of our GLUT window */
 int window; 
 int light;
 
-double glPositMatrix[16];
 double projectionMatrix[16];
 
-void updateGlPositMatrix(CvMatr32f rotation_matrix,CvVect32f translation_vector);
-void setInitialRTMatrix();
+
 
 IplImage *image = 0, *grey = 0, *prev_grey = 0, *pyramid = 0, *prev_pyramid = 0, *swap_temp;
-CvMatr32f rotation_matrix = new float[9];
-CvVect32f translation_vector = new float[3];
 float vertices[4719];
 int model=0;
 
@@ -88,7 +84,7 @@ char* status = 0;
 int count = 0;
 int need_to_init = 0;
 int night_mode = 0;
-int flags = 0;
+
 int add_remove_pt = 0;
 CvPoint pt;
 CvCapture* capture = 0;
@@ -98,8 +94,10 @@ CvPoint upperHeadCorner = cvPoint(0,0);
 int headWidth, headHeight;
 
 
+void cvLoop(double glPositMatrix[16],int initialGuess);
 
-void cvLoop();
+
+
 
 //terminar funcao para inserir novos pontos
 /*
@@ -184,124 +182,25 @@ void setProjectionMatrix(){
 
 }
 
-//uses ViolaJones to find head position
-//returns upperHeadCorner, headWidth, and headHeight
-void getHeadPosition(IplImage* frame, CvPoint* upperHeadCorner,int* headWidth,int* headHeight );
-
-static CvHaarClassifierCascade* cascade = 0;
-int cascadeLoaded=0;
-static CvMemStorage* storage = 0;
-
-void detect_and_draw( IplImage* img,CvPoint* upperHeadCorner,int* headWidth,int* headHeight  )
-{
-
-	double scale = 2.0;
-	IplImage *gray, *small_img;
-	int i, j;
-
-	gray = cvCreateImage( cvSize(img->width,img->height), 8, 1 );
-	small_img = cvCreateImage( cvSize( cvRound (img->width/scale),
-			cvRound (img->height/scale)), 8, 1 );
-
-	cvCvtColor( img, gray, CV_BGR2GRAY );
-	cvResize( gray, small_img, CV_INTER_LINEAR );
-	cvEqualizeHist( small_img, small_img );
-	cvClearMemStorage( storage );
-
-	if( cascade )
-	{
-		double t = (double)cvGetTickCount();
-		CvSeq* faces = cvHaarDetectObjects( small_img, cascade, storage,
-				1.2, 2, 0
-				|CV_HAAR_FIND_BIGGEST_OBJECT
-				//|CV_HAAR_DO_ROUGH_SEARCH
-				//|CV_HAAR_DO_CANNY_PRUNING
-				//|CV_HAAR_SCALE_IMAGE
-				,
-				cvSize(40, 40) );
-		t = (double)cvGetTickCount() - t;
-		//        printf( "detection time = %gms\n", t/((double)cvGetTickFrequency()*1000.) );
-		for( i = 0; i < (faces ? faces->total : 0); i++ )
-		{
-			CvRect* r = (CvRect*)cvGetSeqElem( faces, i );
-			*upperHeadCorner= cvPoint(r->x*scale,r->y*scale);
-			headXNow=r->x*scale;
-			headYNow=r->y*scale;
-			*headWidth=r->width*scale;
-			*headHeight=r->height*scale;					  	 
-		}
-	}
-
-	//    cvShowImage( "result", img );
-	cvReleaseImage( &gray );
-	cvReleaseImage( &small_img );
-}
-
-//loads cascade xml
-void loadCascade(){	
-
-	cascade = (CvHaarClassifierCascade*)cvLoad( "haarcascade_frontalface_default.xml", 0, 0, 0 );
-	if( !cascade ){
-		printf( "ERROR: Could not load classifier cascade\n" );
-	}
-	storage = cvCreateMemStorage(0);
-	cascadeLoaded=1;
-
-}
-void getHeadPosition(IplImage* frame, CvPoint* upperHeadCorner,int* headWidth,int* headHeight ){
-	if(!cascadeLoaded){
-		printf("Cascade not loaded!\n");
-		return;
-	}
-	IplImage *frame_copy = 0;
-	frame_copy = cvCreateImage( cvSize(frame->width,frame->height), IPL_DEPTH_8U, frame->nChannels );
-	cvCopy( frame, frame_copy, 0 );
-	detect_and_draw(frame_copy,upperHeadCorner,headWidth,headHeight);
-
-
-
-	cvRectangle(frame, *upperHeadCorner, cvPoint(upperHeadCorner->x + *headWidth,upperHeadCorner->y + *headHeight), cvScalar(0,0,255), 1);
-
-
-
-	cvReleaseImage( &frame_copy );
-
-}
-
-void do2dDrawing(){
-
-	/*int XSize = 640, YSize = 480;
-	glMatrixMode (GL_PROJECTION);
-	glLoadIdentity ();
-	glOrtho (0, XSize, YSize, 0, 0, 1);
-	glMatrixMode (GL_MODELVIEW);
-	glBegin(GL_POINTS);
-	glColor3f(1.0f, 1.0f, 1.0f);
-	for(int i=0;i<count;i++)
-		glVertex2f(cvPointFrom32f(points[0][i]).x - upperHeadCorner.x  , cvPointFrom32f(points[0][i]).y - upperHeadCorner.y);
-	glEnd();*/
-
-
-
-
-}
-
 
 
 /* The main drawing function. */
 void DrawGLScene(void)
 {  
-	//cvLoop();
-	//	printf("Drawing\n");
-
-	//  	glClearColor(1.0f,1.0f,1.0f,1.0f);
+	
+	
+	CvMatr32f rotation_matrix = new float[9];
+	CvVect32f translation_vector = new float[3];
+	double glPositMatrix[16];
+	cvLoop(glPositMatrix,initialGuess);
+	
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);		// Clear The Screen And The Depth Buffer
 	glLoadIdentity();				// Reset The View
 
 	if(initialGuess){
 
-		setInitialRTMatrix();
-		updateGlPositMatrix(rotation_matrix,translation_vector);	
+		setInitialRTMatrix(rotation_matrix,translation_vector);
+		updateGlPositMatrix(rotation_matrix,translation_vector,glPositMatrix);	
 	}
 
 
@@ -576,10 +475,9 @@ void DrawGLScene(void)
 
 
 
-	do2dDrawing();
 	// since this is double buffered, swap the buffers to display what just got drawn.
 	glutSwapBuffers();
-	cvLoop();
+	
 }
 
 /* The function called when our window is resized (which shouldn't happen, because we're fullscreen) */
@@ -734,7 +632,7 @@ void openGLCustomInit(int argc, char** argv ){
 
 }
 
-void plot2dModel(){
+void plot2dModel(CvMatr32f rotation_matrix,CvVect32f translation_vector){
 
 	float a[] = {  rotation_matrix[0],  rotation_matrix[1],  rotation_matrix[2], translation_vector[0],
 			rotation_matrix[3],  rotation_matrix[4],  rotation_matrix[5], translation_vector[1],
@@ -792,45 +690,19 @@ void plot2dModel(){
 
 }
 
-void updateGlPositMatrix(CvMatr32f rotation_matrix,CvVect32f translation_vector){
-
-	glPositMatrix[0] = rotation_matrix[0];
-	glPositMatrix[1] = rotation_matrix[3];
-	glPositMatrix[2] = rotation_matrix[6];
-	glPositMatrix[3] = 0.0;
-
-	glPositMatrix[4] = rotation_matrix[1];
-	glPositMatrix[5] = rotation_matrix[4];
-	glPositMatrix[6] = rotation_matrix[7];
-	glPositMatrix[7] = 0.0;     
-
-	glPositMatrix[8] =  rotation_matrix[2];
-	glPositMatrix[9] =  rotation_matrix[5];
-	glPositMatrix[10] = rotation_matrix[8];
-	glPositMatrix[11] = 0.0;
-	
-	glPositMatrix[12] =  translation_vector[0];
-	glPositMatrix[13] =  translation_vector[1]; 
-	glPositMatrix[14] =  translation_vector[2]; //negative
-	glPositMatrix[15] = 1.0; //homogeneous
-
-}
-
-void setInitialRTMatrix(){
-
-
-	rotation_matrix[0]=1.0; rotation_matrix[1]=  0; rotation_matrix[2]=  0;
-	rotation_matrix[3]=  0; rotation_matrix[4]=1.0; rotation_matrix[5]=  0;	
-	rotation_matrix[6]=  0; rotation_matrix[7]=  0; rotation_matrix[8]=1.0;
-
-	translation_vector[0]=   -90;
-	translation_vector[1]=    80;
-	translation_vector[2]=+300.0;
-
-}
+/*
+ * This function will retrieve the rotation and translation matrixes 
+ * using the POSIT algorithm
+ * In case the initialGuess parameter is set to 1, the algorithm will
+ * map points to the sinoidal head, else it will only track to the original
+ * ones. In a future version, this function should also map new points back
+ * to the current head position 
+ * 
+ */
 
 std::vector<CvPoint3D32f> modelPoints;
-void getPositMatrix(IplImage* myImage){
+
+void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matrix, CvVect32f translation_vector){
 
 	float cubeSize = 100.0;
 	float alturaNariz = 20.0;
@@ -987,18 +859,23 @@ void insertDefaultPoints(IplImage* grey,int headX,int headY){
 
 void insertNewPoints(IplImage* grey, int headX,int headY,int width, int height){
 
-
+	printf("aqui\n");
 	IplImage *result;
 	// set ROI, you may use following two funs:
 	cvSetImageROI( grey, cvRect( headX, headY, width, height ));
 
+	printf("aqui %d %d %d %d\n",headX, headY, width, height);
 	// sub-image
 	result = cvCreateImage( cvSize(width, height), grey->depth, grey->nChannels );
+	
+	printf("aqui2\n");
 	cvCopy(grey,result);
+	
+	printf("aqui3\n");
 	cvResetImageROI(grey); // release image ROI
 
 
-
+	printf("aqui\n");
 
 	IplImage* eig = cvCreateImage( cvGetSize(result), 32, 1 );
 	IplImage* temp = cvCreateImage( cvGetSize(result), 32, 1 );
@@ -1016,6 +893,8 @@ void insertNewPoints(IplImage* grey, int headX,int headY,int width, int height){
             cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS,20,0.03));*/
 	cvReleaseImage( &eig );
 	cvReleaseImage( &temp );
+	
+	printf("aqui\n");
 
 
 
@@ -1027,7 +906,9 @@ void insertNewPoints(IplImage* grey, int headX,int headY,int width, int height){
 
 }
 
-void cvLoop(){
+int flags = 0;
+
+void cvLoop(double glPositMatrix[16],int initialGuess){
 
 	IplImage* frame = 0;
 	int i, k, c;
@@ -1070,28 +951,17 @@ void cvLoop(){
 
 	getHeadPosition(image, &upperHeadCorner,&headWidth,&headHeight );
 
-	/*
-	if(gCount>=30 && gCount <=30+NUMPTS-1){
-		int source = upperHeadCorner.x+50,sourcey=upperHeadCorner.y+50;
-
-		if(gCount==30) on_mouse(CV_EVENT_LBUTTONDOWN,source    ,sourcey,0,NULL);
-		if(gCount==31) on_mouse(CV_EVENT_LBUTTONDOWN,source+100,sourcey,0,NULL);
-		if(gCount==32) on_mouse(CV_EVENT_LBUTTONDOWN,source +75,sourcey+100,0,NULL);
-		if(gCount==33) on_mouse(CV_EVENT_LBUTTONDOWN,source +25,sourcey+100,0,NULL);
-		if(gCount==34) on_mouse(CV_EVENT_LBUTTONDOWN,source +40,sourcey +40,0,NULL);
-		if(gCount==35) on_mouse(CV_EVENT_LBUTTONDOWN,source +60,sourcey +40,0,NULL);
-		if(gCount==36) on_mouse(CV_EVENT_LBUTTONDOWN,source +60,sourcey +60,0,NULL);
-		if(gCount==37) on_mouse(CV_EVENT_LBUTTONDOWN,source +40,sourcey +60,0,NULL);
-
-	}*/
+	printf("Head x %d head y %d width %d height %d\n",upperHeadCorner.x,upperHeadCorner.y,headWidth,headHeight);	
 
 	if(gCount==30){
+		
 		//		insertDefaultPoints(grey,upperHeadCorner.x+50,upperHeadCorner.y+50);		
 		printf("Head x %d head y %d width %d height %d\n",upperHeadCorner.x,upperHeadCorner.y,headWidth,headHeight);
 		if((upperHeadCorner.x>=0)&&(upperHeadCorner.y>=0)&&
 				(upperHeadCorner.x+headWidth< cvGetSize(grey).width) && (upperHeadCorner.y+headHeight< cvGetSize(grey).height))
 			insertNewPoints(grey,upperHeadCorner.x+(int)(0.25*headWidth),upperHeadCorner.y+(int)(0.25*headHeight),
-					(int)(headWidth*0.5),(int)(headHeight*0.5));		
+					(int)(headWidth*0.5),(int)(headHeight*0.5));
+		printf("Saiu\n");
 	}
 
 
@@ -1103,50 +973,14 @@ void cvLoop(){
 		}
 	}
 
-	if( need_to_init )
-	{
-		/* automatic initialization */
-
-
-		IplImage* eig = cvCreateImage( cvGetSize(grey), 32, 1 );
-		IplImage* temp = cvCreateImage( cvGetSize(grey), 32, 1 );
-
-
-		double quality = 0.01;
-		double min_distance = 5;
-
-		count = MAX_COUNT;
-		cvGoodFeaturesToTrack( grey, eig, temp, points[1], &count,
-				quality, min_distance, 0, 3, 0, 0.04 );	    	  
-		cvFindCornerSubPix( grey, points[1], count,
-				cvSize(win_size,win_size), cvSize(-1,-1),
-				cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS,20,0.03));
-		cvReleaseImage( &eig );
-		cvReleaseImage( &temp );
-
-
-
-		add_remove_pt = 0;
-	}
-	else if( count > 0 )
+	if( count > 0 )
 	{
 		cvCalcOpticalFlowPyrLK( prev_grey, grey, prev_pyramid, pyramid,
 				points[0], points[1], count, cvSize(win_size,win_size), 3, status, 0,
-				cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS,200,0.003), flags );
+				cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS,20,0.03), flags );
 		flags |= CV_LKFLOW_PYR_A_READY;
 		for( i = k = 0; i < count; i++ )
 		{
-			if( add_remove_pt )
-			{
-				double dx = pt.x - points[1][i].x;
-				double dy = pt.y - points[1][i].y;
-
-				if( dx*dx + dy*dy <= 25 )
-				{
-					add_remove_pt = 0;
-					continue;
-				}
-			}
 
 			if( !status[i] )
 				continue;
@@ -1167,52 +1001,28 @@ void cvLoop(){
 				cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS,20,0.03));
 		add_remove_pt = 0;
 	}
+	
+	CvMatr32f rotation_matrix = new float[9];
+	CvVect32f translation_vector = new float[3];
+	
 
 	if(count >=NUMPTS){
 		//getPositMatrix uses points[1] obtained from cvCalcOpticalFlowPyrLK
-		getPositMatrix(image);
-		updateGlPositMatrix(rotation_matrix,translation_vector);	
-		plot2dModel();
+		getPositMatrix(image,initialGuess, rotation_matrix,translation_vector);
+		updateGlPositMatrix(rotation_matrix,translation_vector,glPositMatrix);	
+		//plot2dModel();
 
 	}
 	printf("Count %d\n",count);
-
-
-
 
 	CV_SWAP( prev_grey, grey, swap_temp );
 	CV_SWAP( prev_pyramid, pyramid, swap_temp );
 	CV_SWAP( points[0], points[1], swap_points );
 	need_to_init = 0;
 
-
-
-
 	cvShowImage( "6dofHead", image );
 
-
 	c = cvWaitKey(10);
-	if( (char)c == 27 )
-		exit(0);
-	switch( (char) c )
-	{
-	case 'r':
-		need_to_init = 1;
-		break;
-	case 'c':
-		count = 0;
-		gCount = 0;
-		break;
-	case 'm':
-		model ^= 1;
-		break;
-	case 'n':
-		night_mode ^= 1;
-		break;
-	default:
-		;
-	}
-
 }
 
 int main( int argc, char** argv )
@@ -1224,7 +1034,7 @@ int main( int argc, char** argv )
 	char rawFile[]="head.raw";
 	loadRaw(rawFile);
 
-	loadCascade();
+	
 	setProjectionMatrix();
 	if( argc == 1 || (argc == 2 && strlen(argv[1]) == 1 && isdigit(argv[1][0])))
 		capture = cvCaptureFromCAM( argc == 2 ? argv[1][0] - '0' : 0 );
