@@ -106,9 +106,11 @@ void setInitialRTMatrix(CvMatr32f rotation_matrix,CvVect32f translation_vector){
 	translation_vector[2]=+300.0;
 
 }
-CvHaarClassifierCascade* cascade=0;
-CvMemStorage* storage;
+
 void getHeadPosition(IplImage* frame, CvPoint* upperHeadCorner,int* headWidth,int* headHeight ){
+	
+	static CvHaarClassifierCascade* cascade=0;
+	static CvMemStorage* storage;
 			
 	if(!cascade){
 		loadCascade(&cascade);

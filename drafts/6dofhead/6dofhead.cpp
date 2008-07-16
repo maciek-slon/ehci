@@ -477,6 +477,7 @@ void DrawGLScene(void)
 
 	// since this is double buffered, swap the buffers to display what just got drawn.
 	glutSwapBuffers();
+	if(initialGuess && gCount >10)initialGuess=0;
 	
 }
 
@@ -858,20 +859,16 @@ void insertDefaultPoints(IplImage* grey,int headX,int headY){
 }
 
 void insertNewPoints(IplImage* grey, int headX,int headY,int width, int height){
-
-	printf("aqui\n");
+	
 	IplImage *result;
 	// set ROI, you may use following two funs:
 	cvSetImageROI( grey, cvRect( headX, headY, width, height ));
 
-	printf("aqui %d %d %d %d\n",headX, headY, width, height);
 	// sub-image
 	result = cvCreateImage( cvSize(width, height), grey->depth, grey->nChannels );
 	
-	printf("aqui2\n");
 	cvCopy(grey,result);
 	
-	printf("aqui3\n");
 	cvResetImageROI(grey); // release image ROI
 
 
@@ -888,6 +885,7 @@ void insertNewPoints(IplImage* grey, int headX,int headY,int width, int height){
 	cvGoodFeaturesToTrack( result, eig, temp, points[0], &count,
 			quality, min_distance, 0, 3, 0, 0.04 );	    	
 	//TODO: ENABLE SUBPIX AFTER TESTS  
+	//TODO: clear cvOpticalFlowPyrLK flags after  inserting new points
 	/*cvFindCornerSubPix( result, points[0], count,
             cvSize(win_size,win_size), cvSize(-1,-1),
             cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS,20,0.03));*/
@@ -906,9 +904,11 @@ void insertNewPoints(IplImage* grey, int headX,int headY,int width, int height){
 
 }
 
-int flags = 0;
+
 
 void cvLoop(double glPositMatrix[16],int initialGuess){
+	
+	static int flags = 0;
 
 	IplImage* frame = 0;
 	int i, k, c;
@@ -953,7 +953,8 @@ void cvLoop(double glPositMatrix[16],int initialGuess){
 
 	printf("Head x %d head y %d width %d height %d\n",upperHeadCorner.x,upperHeadCorner.y,headWidth,headHeight);	
 
-	if(gCount==30){
+	//if(gCount==30){
+	if(initialGuess && gCount >5){
 		
 		//		insertDefaultPoints(grey,upperHeadCorner.x+50,upperHeadCorner.y+50);		
 		printf("Head x %d head y %d width %d height %d\n",upperHeadCorner.x,upperHeadCorner.y,headWidth,headHeight);
@@ -1023,6 +1024,7 @@ void cvLoop(double glPositMatrix[16],int initialGuess){
 	cvShowImage( "6dofHead", image );
 
 	c = cvWaitKey(10);
+	
 }
 
 int main( int argc, char** argv )
