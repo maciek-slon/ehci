@@ -107,6 +107,99 @@ void setInitialRTMatrix(CvMatr32f rotation_matrix,CvVect32f translation_vector){
 
 }
 
+/*
+ * This function was used to plot the model using openCv matrix multiplications
+ * during development phase. There's no use for it in a while.
+ */
+
+/*
+  
+float vertices[4719];
+
+float points3d[NUMPTS][4]={ {0,0,0,1},{100*scale,0,0,1},{75*scale,-100*scale,0,1},{25*scale,-100*scale,0,1},
+		{40*scale,-40*scale,+100*scale,1},{60*scale,-40*scale,+100*scale,1},
+		{60*scale,-60*scale,+100*scale,1},{50*scale,-50*scale,+140*scale,1}
+};
+int model=0;
+float gama = 0;//3.1415;
+float dScale = 10.0;
+float myRoty[] = { cos(theta),   0,  sin(theta),   0,
+		0, 	1,  	0,  	  0,
+		-sin(theta),   0,   cos(theta),  0,
+		0,  0,  0,  1 };
+float myRotz[] = { cos(gama),  -sin(gama),    0,  1.874*dScale,
+		sin(gama),   cos(gama),    0,  -1.999*dScale,
+		0, 	0,  	1,  	    -2.643*dScale,
+		0,  0,  0,  1 };
+		
+void loadVertices(){
+	int pos = 0;
+	FILE* in = fopen("vertices.txt","r");
+	while(fscanf(in,"%f",&vertices[pos++])!=EOF);
+	fclose(in);
+}
+
+void plot2dModel(CvMatr32f rotation_matrix,CvVect32f translation_vector){
+
+	float a[] = {  rotation_matrix[0],  rotation_matrix[1],  rotation_matrix[2], translation_vector[0],
+			rotation_matrix[3],  rotation_matrix[4],  rotation_matrix[5], translation_vector[1],
+			rotation_matrix[6],  rotation_matrix[7],  rotation_matrix[8], translation_vector[2],
+			0,  0,  1,  0 };
+
+
+	float pos[] = {0,0,0};
+
+	CvMat Ma = cvMat(4, 4, CV_32FC1, a);
+
+	int w;
+	CvMat Mpoints[NUMPTS];
+
+	for(w=0;w<NUMPTS;w++){
+		Mpoints[w] = cvMat( 4, 1, CV_32FC1,&points3d[w]);
+	}
+
+	CvMat* Mr1 =  cvCreateMat(4,1,CV_32FC1);
+
+	//plotting model
+	if(model){
+		for(int i=0;i<4719/3;i++){
+			float myPoints[4];
+			float scale = 30;
+
+			CvMat Mry = cvMat(4, 4, CV_32FC1, myRoty);
+			CvMat Mrz = cvMat(4, 4, CV_32FC1, myRotz);
+
+			myPoints[0]=scale*vertices[3*i+0];
+			myPoints[1]=scale*vertices[3*i+1];
+			myPoints[2]=scale*vertices[3*i+2];
+			myPoints[3]=1;
+			CvMat temp = cvMat(4,1,CV_32FC1,&myPoints);
+
+			cvMatMul(&Mry,&temp,&temp);
+			cvMatMul(&Mrz,&temp,&temp);
+			cvMatMul(&Ma,&temp,Mr1);
+
+			cvCircle( image, cvPoint(320+1000*cvmGet(Mr1,0,0)/cvmGet(Mr1,2,0),240+1000*cvmGet(Mr1,1,0)/cvmGet(Mr1,2,0)), 3, CV_RGB(0,0,200), -1, 8,0);
+		}		
+
+	}
+
+
+
+	for(w=0;w<NUMPTS;w++){
+
+		cvMatMul(&Ma,&Mpoints[w],Mr1);
+		//		printf("coord %f %f ",cvmGet(&Mpoints[w],0,0),cvmGet(&Mpoints[w],1,0));
+		//		printf("coord %f %f\n",cvmGet(Mr1,0,0),cvmGet(Mr1,1,0));
+		cvCircle( image, cvPoint(320+1000*cvmGet(Mr1,0,0)/cvmGet(Mr1,2,0),240+1000*cvmGet(Mr1,1,0)/cvmGet(Mr1,2,0)), w==0?8:3,w%2==0?CV_RGB(128,0,0): (w==7? CV_RGB(0,0,200) : CV_RGB(200,0,0)), -1, 8,0);
+
+	}
+
+}
+*/
+
+
+
 void getHeadPosition(IplImage* frame, CvPoint* upperHeadCorner,int* headWidth,int* headHeight ){
 	
 	static CvHaarClassifierCascade* cascade=0;
