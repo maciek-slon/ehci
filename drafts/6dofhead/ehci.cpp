@@ -67,6 +67,30 @@ void detect_and_draw( IplImage* img,CvPoint* upperHeadCorner,int* headWidth,int*
 	cvReleaseImage( &small_img );
 }
 
+void getHeadPosition(IplImage* frame, CvPoint* upperHeadCorner,int* headWidth,int* headHeight ){
+	
+	static CvHaarClassifierCascade* cascade=0;
+	static CvMemStorage* storage;
+			
+	if(!cascade){
+		loadCascade(&cascade);
+		storage = cvCreateMemStorage(0);
+	}
+	
+	
+	IplImage *frame_copy = 0;
+	frame_copy = cvCreateImage( cvSize(frame->width,frame->height), IPL_DEPTH_8U, frame->nChannels );
+	cvCopy( frame, frame_copy, 0 );
+		
+	
+	detect_and_draw(frame_copy,upperHeadCorner,headWidth,headHeight,cascade,storage);
+
+	cvRectangle(frame, *upperHeadCorner, cvPoint(upperHeadCorner->x + *headWidth,upperHeadCorner->y + *headHeight), cvScalar(0,0,255), 1);
+
+	cvReleaseImage( &frame_copy );
+
+}
+
 
 
 
@@ -197,29 +221,3 @@ void plot2dModel(CvMatr32f rotation_matrix,CvVect32f translation_vector){
 
 }
 */
-
-
-
-void getHeadPosition(IplImage* frame, CvPoint* upperHeadCorner,int* headWidth,int* headHeight ){
-	
-	static CvHaarClassifierCascade* cascade=0;
-	static CvMemStorage* storage;
-			
-	if(!cascade){
-		loadCascade(&cascade);
-		storage = cvCreateMemStorage(0);
-	}
-	
-	
-	IplImage *frame_copy = 0;
-	frame_copy = cvCreateImage( cvSize(frame->width,frame->height), IPL_DEPTH_8U, frame->nChannels );
-	cvCopy( frame, frame_copy, 0 );
-		
-	
-	detect_and_draw(frame_copy,upperHeadCorner,headWidth,headHeight,cascade,storage);
-
-	cvRectangle(frame, *upperHeadCorner, cvPoint(upperHeadCorner->x + *headWidth,upperHeadCorner->y + *headHeight), cvScalar(0,0,255), 1);
-
-	cvReleaseImage( &frame_copy );
-
-}

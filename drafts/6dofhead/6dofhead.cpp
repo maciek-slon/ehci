@@ -47,8 +47,6 @@ float theta = 0;//3.1415;
 	               0,  0,  0,  0 };*/
 
 
-int gCount = 0;
-
 
 
 #define NUMPTS 8
@@ -65,11 +63,9 @@ int win_size = 10;
 const int MAX_COUNT = 500;
 CvPoint2D32f* points[2] = {0,0}, *swap_points;
 char* status = 0;
-int count = 0;
 int need_to_init = 0;
 int night_mode = 0;
 
-int add_remove_pt = 0;
 CvPoint pt;
 CvCapture* capture = 0;
 
@@ -78,7 +74,7 @@ CvPoint upperHeadCorner = cvPoint(0,0);
 int headWidth, headHeight;
 
 
-void cvLoop(double glPositMatrix[16],int initialGuess);
+int cvLoop(double glPositMatrix[16],int initialGuess);
 
 
 
@@ -171,7 +167,7 @@ void DrawGLScene(void)
 	CvMatr32f rotation_matrix = new float[9];
 	CvVect32f translation_vector = new float[3];
 	double glPositMatrix[16];
-	cvLoop(glPositMatrix,initialGuess);
+	int detected = cvLoop(glPositMatrix,initialGuess);
 	
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);		// Clear The Screen And The Depth Buffer
 	glLoadIdentity();				// Reset The View
@@ -451,7 +447,7 @@ void DrawGLScene(void)
 
 	// since this is double buffered, swap the buffers to display what just got drawn.
 	glutSwapBuffers();
-	if(initialGuess && gCount >10)initialGuess=0;
+	if(detected) initialGuess=0;
 	
 }
 
@@ -483,10 +479,6 @@ void keyPressed(unsigned char key, int x, int y)
 		exit(1);                   	
 		break; // redundant.
 
-	case 'w':
-		count=0;
-		gCount=29;
-		break;
 	case 'i':
 		initialGuess = !initialGuess;
 		printf("Initial guess now is %d\n",initialGuess);
@@ -618,7 +610,8 @@ void openGLCustomInit(int argc, char** argv ){
 
 std::vector<CvPoint3D32f> modelPoints;
 
-void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matrix, CvVect32f translation_vector){
+void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matrix, CvVect32f translation_vector,
+		int numOfTrackingPoints){
 
 	float cubeSize = 100.0;
 	float alturaNariz = 20.0;
@@ -633,7 +626,7 @@ void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matri
 
 	//setInitialRTMatrix();
 
-	for(int i=0;i<count;i++){
+	for(int i=0;i<numOfTrackingPoints;i++){
 		float myPixel[4];
 
 		int px = cvPointFrom32f(points[1][i]).x - upperHeadCorner.x ;
@@ -691,7 +684,7 @@ void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matri
 			printf("Ip %f %f\n", point2D.x, point2D.y);
 
 		}
-		else if(count==modelPoints.size()){
+		else if(numOfTrackingPoints==modelPoints.size()){
 			CvPoint2D32f point2D;
 			point2D.x = cvPointFrom32f(points[1][i]).x-320;
 			point2D.y = cvPointFrom32f(points[1][i]).y-240;
@@ -716,7 +709,7 @@ void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matri
 		modelPoints.push_back(cvPoint3D32f(40.0f, -60.0f, alturaNariz));
 		modelPoints.push_back(cvPoint3D32f(60.0f, -60.0f, alturaNariz));*/
 
-	if(modelPoints.size()==count){
+	if(modelPoints.size()==numOfTrackingPoints){
 		printf("Creating posit with %d points\n",modelPoints.size());
 		CvPOSITObject *positObject = cvCreatePOSITObject( &modelPoints[0], static_cast<int>(modelPoints.size()) );
 
@@ -756,26 +749,12 @@ void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matri
 
 }
 
-void insertDefaultPoints(IplImage* grey,int headX,int headY){
+//returns the number of points it was able to insert
 
-	count=0;
-
-	points[0][count++] = cvPointTo32f( cvPoint(headX     , headY) );
-	points[0][count++] = cvPointTo32f( cvPoint(headX+100 , headY) );
-	points[0][count++] = cvPointTo32f( cvPoint(headX+ 75 , headY+100) );
-	points[0][count++] = cvPointTo32f( cvPoint(headX+ 25 , headY+100) );
-	points[0][count++] = cvPointTo32f( cvPoint(headX+ 40 , headY +40) );
-	points[0][count++] = cvPointTo32f( cvPoint(headX+ 60 , headY +40) );
-	points[0][count++] = cvPointTo32f( cvPoint(headX+ 60 , headY +60) );
-	points[0][count++] = cvPointTo32f( cvPoint(headX+ 40 , headY +60) );
-	cvFindCornerSubPix( grey, points[0] , 8,
-			cvSize(win_size,win_size), cvSize(-1,-1),
-			cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS,20,0.03));
-}
-
-void insertNewPoints(IplImage* grey, int headX,int headY,int width, int height){
+int insertNewPoints(IplImage* grey, int headX,int headY,int width, int height){
 	
 	IplImage *result;
+	
 	// set ROI, you may use following two funs:
 	cvSetImageROI( grey, cvRect( headX, headY, width, height ));
 
@@ -796,38 +775,41 @@ void insertNewPoints(IplImage* grey, int headX,int headY,int width, int height){
 	double quality = 0.01;
 	double min_distance = 10;
 
-	count = 10;//MAX_COUNT;
-	cvGoodFeaturesToTrack( result, eig, temp, points[0], &count,
+	int numPoints = 10;//MAX_COUNT;
+	cvGoodFeaturesToTrack( result, eig, temp, points[0], &numPoints,
 			quality, min_distance, 0, 3, 0, 0.04 );	    	
 	//TODO: ENABLE SUBPIX AFTER TESTS  
 	//TODO: clear cvOpticalFlowPyrLK flags after  inserting new points
-	/*cvFindCornerSubPix( result, points[0], count,
+	/*cvFindCornerSubPix( result, points[0], numPoints,
             cvSize(win_size,win_size), cvSize(-1,-1),
             cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS,20,0.03));*/
 	cvReleaseImage( &eig );
 	cvReleaseImage( &temp );
-	
-	printf("aqui\n");
 
 
-
-	for(int i=0;i<count;i++){
+	for(int i=0;i<numPoints;i++){
 		CvPoint pt = cvPointFrom32f(points[0][i]);
 		points[0][i] = cvPoint2D32f(pt.x+headX,pt.y+headY);
 	}
+	printf("Here, numPoints is %d",numPoints);
 
-
+	return numPoints;
 }
 
+/*
+ * This function detects where the head is and returns the openGL matrix associated 
+ * in case it doesn't work (if the grabed image was too dark, or if it was one of 
+ * the first frames, during initialization), it will return 0. It returns 1 otherwise
+ */
 
-
-void cvLoop(double glPositMatrix[16],int initialGuess){
+int cvLoop(double glPositMatrix[16],int initialGuess){
 	
 	static int flags = 0;
 
 	IplImage* frame = 0;
 	int i, k, c;
-	gCount++;
+	static int numberOfTrackingPoints=0;
+
 
 
 	if(READFROMIMAGEFILE){
@@ -836,7 +818,7 @@ void cvLoop(double glPositMatrix[16],int initialGuess){
 	else{
 		frame = cvQueryFrame( capture );
 		if( !frame )
-			return;
+			return 0;
 	}
 
 	if( !image )
@@ -868,34 +850,23 @@ void cvLoop(double glPositMatrix[16],int initialGuess){
 
 	printf("Head x %d head y %d width %d height %d\n",upperHeadCorner.x,upperHeadCorner.y,headWidth,headHeight);	
 
-	//if(gCount==30){
-	if(initialGuess && gCount >5){
-		
-		//		insertDefaultPoints(grey,upperHeadCorner.x+50,upperHeadCorner.y+50);		
-		printf("Head x %d head y %d width %d height %d\n",upperHeadCorner.x,upperHeadCorner.y,headWidth,headHeight);
+	if(initialGuess){
+		//automatic initialization won't work in case face was not detected
+		if((headWidth == 0) || (headHeight==0)) return 0;				
 		if((upperHeadCorner.x>=0)&&(upperHeadCorner.y>=0)&&
 				(upperHeadCorner.x+headWidth< cvGetSize(grey).width) && (upperHeadCorner.y+headHeight< cvGetSize(grey).height))
-			insertNewPoints(grey,upperHeadCorner.x+(int)(0.25*headWidth),upperHeadCorner.y+(int)(0.25*headHeight),
+			numberOfTrackingPoints = insertNewPoints(grey,upperHeadCorner.x+(int)(0.25*headWidth),upperHeadCorner.y+(int)(0.25*headHeight),
 					(int)(headWidth*0.5),(int)(headHeight*0.5));
-		printf("Saiu\n");
 	}
 
 
-
-
-	if(count>10){
-		for(i=0;i<count;i++){
-			cvCircle( image, cvPointFrom32f(points[0][i]), 3, CV_RGB(0,0,100+30*i), -1, 8,0);
-		}
-	}
-
-	if( count > 0 )
+	if( numberOfTrackingPoints > 0 )
 	{
 		cvCalcOpticalFlowPyrLK( prev_grey, grey, prev_pyramid, pyramid,
-				points[0], points[1], count, cvSize(win_size,win_size), 3, status, 0,
+				points[0], points[1], numberOfTrackingPoints, cvSize(win_size,win_size), 3, status, 0,
 				cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS,20,0.03), flags );
 		flags |= CV_LKFLOW_PYR_A_READY;
-		for( i = k = 0; i < count; i++ )
+		for( i = k = 0; i < numberOfTrackingPoints; i++ )
 		{
 
 			if( !status[i] )
@@ -904,31 +875,24 @@ void cvLoop(double glPositMatrix[16],int initialGuess){
 			points[1][k++] = points[1][i];
 			cvCircle( image, cvPointFrom32f(points[1][i]), 3, CV_RGB(0,200+20*i,0), -1, 8,0);
 		}
-		count = k;
+		numberOfTrackingPoints = k;
 	}
 
 
 
-	if( add_remove_pt && count < MAX_COUNT )
-	{
-		points[1][count++] = cvPointTo32f(pt);
-		cvFindCornerSubPix( grey, points[1] + count - 1, 1,
-				cvSize(win_size,win_size), cvSize(-1,-1),
-				cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS,20,0.03));
-		add_remove_pt = 0;
-	}
 	
 	CvMatr32f rotation_matrix = new float[9];
 	CvVect32f translation_vector = new float[3];
 	
 
-	if(count >=NUMPTS){
+	if(numberOfTrackingPoints >=NUMPTS){
 		//getPositMatrix uses points[1] obtained from cvCalcOpticalFlowPyrLK
-		getPositMatrix(image,initialGuess, rotation_matrix,translation_vector);
+		getPositMatrix(image,initialGuess, rotation_matrix,translation_vector,
+				numberOfTrackingPoints);
 		updateGlPositMatrix(rotation_matrix,translation_vector,glPositMatrix);	
 
 	}
-	printf("Count %d\n",count);
+	printf("Number of tracking points %d\n",numberOfTrackingPoints);
 
 	CV_SWAP( prev_grey, grey, swap_temp );
 	CV_SWAP( prev_pyramid, pyramid, swap_temp );
@@ -939,6 +903,7 @@ void cvLoop(double glPositMatrix[16],int initialGuess){
 
 	c = cvWaitKey(10);
 	
+	return 1;
 }
 
 int main( int argc, char** argv )
