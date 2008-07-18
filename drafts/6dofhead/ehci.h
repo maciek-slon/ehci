@@ -15,6 +15,11 @@ void setInitialRTMatrix(CvMatr32f rotation_matrix,CvVect32f translation_vector);
 void getHeadPosition(IplImage* frame, CvPoint* upperHeadCorner,int* headWidth,int* headHeight );
 
 
+void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matrix, CvVect32f translation_vector,
+		int numOfTrackingPoints,int focus,CvPoint2D32f* points, CvPoint upperHeadCorner, 
+		int headWidth, int headHeight, int* refX, int* refY);
+
+
 
 
 #endif /*EHCI_H_*/

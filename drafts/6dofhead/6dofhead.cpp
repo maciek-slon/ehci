@@ -35,7 +35,7 @@ IplImage *image = 0, *grey = 0, *prev_grey = 0, *pyramid = 0, *prev_pyramid = 0,
 
 
 
-int refX,refY,refZ;
+int refX,refY;
 int lastHeadW,lastHeadH;
 
 int initialGuess=1;
@@ -598,156 +598,7 @@ void openGLCustomInit(int argc, char** argv ){
 }
 
 
-/*
- * This function will retrieve the rotation and translation matrixes 
- * using the POSIT algorithm
- * In case the initialGuess parameter is set to 1, the algorithm will
- * map points to the sinoidal head, else it will only track to the original
- * ones. In a future version, this function should also map new points back
- * to the current head position 
- * 
- */
 
-std::vector<CvPoint3D32f> modelPoints;
-
-void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matrix, CvVect32f translation_vector,
-		int numOfTrackingPoints){
-
-	float cubeSize = 100.0;
-	float alturaNariz = 20.0;
-
-	int i;
-
-
-
-	std::vector<CvPoint2D32f> imagePoints;
-
-	if(initialGuess) modelPoints.clear();
-
-	//setInitialRTMatrix();
-
-	for(int i=0;i<numOfTrackingPoints;i++){
-		float myPixel[4];
-
-		int px = cvPointFrom32f(points[1][i]).x - upperHeadCorner.x ;
-		int py = cvPointFrom32f(points[1][i]).y - upperHeadCorner.y ;
-		int vertIndex = cvRound(3036.0*myPixel[0]);
-		glReadPixels(px,480-py,1,1,GL_RGBA,GL_FLOAT,&myPixel);
-		if(initialGuess){
-			printf("Pixel color %d %d %d %f %f %f %f\n",px,-py,(int)(40*sin(px*3.141593/headWidth)), myPixel[0],myPixel[1],myPixel[2],myPixel[3]);
-			printf("Vertex %f %d Coord %f %f %f headw %d\n",3036.0*myPixel[0], cvRound(3036.0*myPixel[0]),
-
-					(triangles[vertIndex].vert[0][0]/30.0)-1.874,
-					(triangles[vertIndex].vert[0][1]/30.0)+1.999,
-					(triangles[vertIndex].vert[0][2]/30.0)+2.643,headWidth
-			);
-			cvCircle( myImage, cvPoint(20*(4+(triangles[vertIndex].vert[0][0]/30.0)-1.874),
-					20*(4+(triangles[vertIndex].vert[0][1]/30.0)+1.999)), 3, CV_RGB(0,0,255), -1, 8,0);
-			cvRectangle( myImage, cvPoint(px,py),cvPoint(px+3,py+3),CV_RGB(255,0,0),1);
-
-
-		}
-		//if(vertIndex>0){
-		/*				modelPoints.push_back( 	cvPoint3D32f( triangles[vertIndex].vert[0][0],
-									triangles[vertIndex].vert[0][1],
-
-									triangles[vertIndex].vert[0][2]));*/
-		if(initialGuess){
-			if(i==0){
-				
-				refX = cvPointFrom32f(points[1][i]).x-upperHeadCorner.x;//(int)(px/(1.0*headWidth)*100);
-				refY = cvPointFrom32f(points[1][i]).y-upperHeadCorner.y;//-(int)(py/(1.0*headHeight)*100);
-				refZ = 0;//(int)(40*sin(px*3.141593/headWidth));
-				lastHeadW = headWidth;
-				lastHeadH = headHeight;
-			}
-			float cScale = 100;
-			
-			float fx = (1.6667 * px/(1.0*headWidth)) - 0.332;
-			float fy = (1.6667 * py/(1.0*headHeight)) - 0.332;
-			float fz = sin(fx*3.141593);//cos((px-0.5*headWidth)/headWidth * 1.2 *3.141593);
-			printf("px %d py %d hw %d hh %d fx %f ifx %d fy %f fz %f\n",px,py,headWidth,headHeight,fx,int(fx*cScale),fy,fz);
-			
-			modelPoints.push_back(   cvPoint3D32f( 	(int)(fx * cScale),
-												   -(int)(fy * cScale),	
-													(int)(fz * cScale)));
-			
-			/*modelPoints.push_back(   cvPoint3D32f( 	(int)(px/(1.0*headWidth)*cScale),
-					-(int)(py/(1.0*headHeight)*cScale),	
-					(int)(1.1*cScale*sin(px*3.141593/headWidth)) ));*/
-			//(px<headWidth/2.0)?(int)((headWidth/4.0)*(px/(headWidth/2.0))):(int)((headWidth/4.0)*((headWidth -px)/(1.0*headWidth)))
-
-			CvPoint2D32f point2D;
-			point2D.x = cvPointFrom32f(points[1][i]).x-320;
-			point2D.y = cvPointFrom32f(points[1][i]).y-240;				
-			imagePoints.push_back( point2D );
-			printf("Ip %f %f\n", point2D.x, point2D.y);
-
-		}
-		else if(numOfTrackingPoints==modelPoints.size()){
-			CvPoint2D32f point2D;
-			point2D.x = cvPointFrom32f(points[1][i]).x-320;
-			point2D.y = cvPointFrom32f(points[1][i]).y-240;
-			imagePoints.push_back( point2D );
-			printf("Ip %f %f\n", point2D.x, point2D.y);
-
-		}
-
-
-
-		//}
-
-	}
-
-	/*		modelPoints.push_back(cvPoint3D32f(0.0f, 0.0f, 0.0f));
-		modelPoints.push_back(cvPoint3D32f(cubeSize, 0.0f, 0.0f));
-		modelPoints.push_back(cvPoint3D32f((3/4.0)*cubeSize, -cubeSize, 0.0f));
-		modelPoints.push_back(cvPoint3D32f((1/4.0)*cubeSize, -cubeSize, 0.0f));
-
-		modelPoints.push_back(cvPoint3D32f(40.0f, -40.0f, alturaNariz));
-		modelPoints.push_back(cvPoint3D32f(60.0f, -40.0f, alturaNariz));
-		modelPoints.push_back(cvPoint3D32f(40.0f, -60.0f, alturaNariz));
-		modelPoints.push_back(cvPoint3D32f(60.0f, -60.0f, alturaNariz));*/
-
-	if(modelPoints.size()==numOfTrackingPoints){
-		printf("Creating posit with %d points\n",modelPoints.size());
-		CvPOSITObject *positObject = cvCreatePOSITObject( &modelPoints[0], static_cast<int>(modelPoints.size()) );
-
-
-
-		/*		for(i=0;i<NUMPTS;i++){
-				CvPoint2D32f point2D;
-				   //The central point is not add because POSIT needs the image point coordinates related to the middle point of the image
-				point2D.x = cvPointFrom32f(points[1][i]).x-320;
-				point2D.y = cvPointFrom32f(points[1][i]).y-240; 
-				imagePoints.push_back( point2D );
-				printf("%f %f\n",point2D.x,point2D.y);
-			}
-			printf("\n");*/
-
-		//set posit termination criteria: 1000 max iterations, convergence epsilon 1.0e-5
-		CvTermCriteria criteria = cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 1000, 1.0e-5 );
-		
-		//FILE* in = fopen("in.txt","r");
-		int myFocus= MYFOCUS;
-		//fscanf(in,"%d",&myFocus);
-		//fclose(in);
-		cvPOSIT( positObject, &imagePoints[0], myFocus, criteria, rotation_matrix, translation_vector ); 
-		cvReleasePOSITObject (&positObject);
-
-	}
-	printf("Matrix data\n");
-	for(i=0;i<9;i++){
-		printf("%.5f ",rotation_matrix[i]);
-	}
-	for(i=0;i<3;i++){
-		printf("%.5f ",translation_vector[i]);
-	}
-	printf("\n");
-
-
-
-}
 
 //returns the number of points it was able to insert
 
@@ -848,6 +699,7 @@ int cvLoop(double glPositMatrix[16],int initialGuess){
 
 	getHeadPosition(image, &upperHeadCorner,&headWidth,&headHeight );
 
+
 	printf("Head x %d head y %d width %d height %d\n",upperHeadCorner.x,upperHeadCorner.y,headWidth,headHeight);	
 
 	if(initialGuess){
@@ -857,6 +709,8 @@ int cvLoop(double glPositMatrix[16],int initialGuess){
 				(upperHeadCorner.x+headWidth< cvGetSize(grey).width) && (upperHeadCorner.y+headHeight< cvGetSize(grey).height))
 			numberOfTrackingPoints = insertNewPoints(grey,upperHeadCorner.x+(int)(0.25*headWidth),upperHeadCorner.y+(int)(0.25*headHeight),
 					(int)(headWidth*0.5),(int)(headHeight*0.5));
+		lastHeadW = headWidth;
+		lastHeadH = headHeight;
 	}
 
 
@@ -888,7 +742,8 @@ int cvLoop(double glPositMatrix[16],int initialGuess){
 	if(numberOfTrackingPoints >=NUMPTS){
 		//getPositMatrix uses points[1] obtained from cvCalcOpticalFlowPyrLK
 		getPositMatrix(image,initialGuess, rotation_matrix,translation_vector,
-				numberOfTrackingPoints);
+				numberOfTrackingPoints,MYFOCUS,points[1],upperHeadCorner,
+				headWidth,headHeight,&refX,&refY);
 		updateGlPositMatrix(rotation_matrix,translation_vector,glPositMatrix);	
 
 	}
