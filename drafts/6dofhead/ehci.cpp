@@ -40,10 +40,8 @@ void detect_and_draw( IplImage* img,CvPoint* upperHeadCorner,int* headWidth,int*
 	cvEqualizeHist( small_img, small_img );
 	cvClearMemStorage( storage );
 	
-	printf("Dentro do detect\n");
 	if( cascade )
-	{
-		printf("Entrou no cascade");
+	{		
 		double t = (double)cvGetTickCount();
 		CvSeq* faces = cvHaarDetectObjects( small_img, cascade, storage,
 				1.2, 2, 0
@@ -224,6 +222,21 @@ void plot2dModel(CvMatr32f rotation_matrix,CvVect32f translation_vector){
 }
 */
 
+
+
+void printMatrixData(CvMatr32f rotation_matrix, CvVect32f translation_vector){
+	printf("Matrix data\n");
+	for(int i=0;i<9;i++){
+		printf("%.5f ",rotation_matrix[i]);
+	}
+	for(int i=0;i<3;i++){
+		printf("%.5f ",translation_vector[i]);
+	}
+	printf("\n");
+}
+
+
+
 /*
  * This function will retrieve the rotation and translation matrixes 
  * using the POSIT algorithm
@@ -238,13 +251,9 @@ std::vector<CvPoint3D32f> modelPoints;
 
 void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matrix, CvVect32f translation_vector,
 		int numOfTrackingPoints,int focus,CvPoint2D32f* points, CvPoint upperHeadCorner, 
-		int headWidth, int headHeight, int* refX, int* refY){
-
-	float cubeSize = 100.0;
-	float alturaNariz = 20.0;
+		int headWidth, int headHeight, int* refX, int* refY, float modelScale){
 
 	int i;
-
 
 
 	std::vector<CvPoint2D32f> imagePoints;
@@ -269,16 +278,15 @@ void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matri
 				*refY = cvPointFrom32f(points[i]).y-upperHeadCorner.y;//-(int)(py/(1.0*headHeight)*100);
 				//refZ = 0;//(int)(40*sin(px*3.141593/headWidth));
 			}
-			float cScale = 100;
 			
 			float fx = (1.6667 * px/(1.0*headWidth)) - 0.332;
 			float fy = (1.6667 * py/(1.0*headHeight)) - 0.332;
 			float fz = sin(fx*3.141593);//cos((px-0.5*headWidth)/headWidth * 1.2 *3.141593);
-			printf("px %d py %d hw %d hh %d fx %f ifx %d fy %f fz %f\n",px,py,headWidth,headHeight,fx,int(fx*cScale),fy,fz);
+			//printf("px %d py %d hw %d hh %d fx %f ifx %d fy %f fz %f\n",px,py,headWidth,headHeight,fx,int(fx*cScale),fy,fz);
 			
-			modelPoints.push_back(   cvPoint3D32f( 	(int)(fx * cScale),
-												   -(int)(fy * cScale),	
-													(int)(fz * cScale)));
+			modelPoints.push_back(   cvPoint3D32f( 	(int)(fx * modelScale),
+												   -(int)(fy * modelScale),	
+													(int)(fz * modelScale)));
 			
 			/*modelPoints.push_back(   cvPoint3D32f( 	(int)(px/(1.0*headWidth)*cScale),
 					-(int)(py/(1.0*headHeight)*cScale),	
@@ -289,7 +297,7 @@ void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matri
 			point2D.x = cvPointFrom32f(points[i]).x-320;
 			point2D.y = cvPointFrom32f(points[i]).y-240;				
 			imagePoints.push_back( point2D );
-			printf("Ip %f %f\n", point2D.x, point2D.y);
+			//printf("Ip %f %f\n", point2D.x, point2D.y);
 
 		}
 		else if(numOfTrackingPoints==modelPoints.size()){
@@ -297,7 +305,7 @@ void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matri
 			point2D.x = cvPointFrom32f(points[i]).x-320;
 			point2D.y = cvPointFrom32f(points[i]).y-240;
 			imagePoints.push_back( point2D );
-			printf("Ip %f %f\n", point2D.x, point2D.y);
+			//printf("Ip %f %f\n", point2D.x, point2D.y);
 
 		}
 
@@ -320,15 +328,186 @@ void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matri
 		cvReleasePOSITObject (&positObject);
 
 	}
-	printf("Matrix data\n");
-	for(i=0;i<9;i++){
-		printf("%.5f ",rotation_matrix[i]);
-	}
-	for(i=0;i<3;i++){
-		printf("%.5f ",translation_vector[i]);
-	}
-	printf("\n");
+	
+	//printMatrixData(rotation_matrix,translation_vector);
+	
+}
+
+/*
+ * This function inserts feature points according to cvFindGoodFeatures to Track
+ * in the roi given by headX,headY, width, and height
+ * Returns the number of points it was able to insert 
+ */
 
 
+int insertNewPoints(IplImage* grey, int headX,int headY,int width, int height,
+		CvPoint2D32f* points){
+	
+	IplImage *result;
+	
+	// set ROI, you may use following two funs:
+	cvSetImageROI( grey, cvRect( headX, headY, width, height ));
+
+	// sub-image
+	result = cvCreateImage( cvSize(width, height), grey->depth, grey->nChannels );
+	
+	cvCopy(grey,result);
+	
+	cvResetImageROI(grey); // release image ROI
+
+
+	IplImage* eig = cvCreateImage( cvGetSize(result), 32, 1 );
+	IplImage* temp = cvCreateImage( cvGetSize(result), 32, 1 );
+
+
+	double quality = 0.01;
+	double min_distance = 10;
+
+	int numPoints = 10;//MAX_COUNT;
+	cvGoodFeaturesToTrack( result, eig, temp, points, &numPoints,
+			quality, min_distance, 0, 3, 0, 0.04 );	    	
+	//TODO: ENABLE SUBPIX AFTER TESTS  
+	//TODO: clear cvOpticalFlowPyrLK flags after  inserting new points
+	/*cvFindCornerSubPix( result, points[0], numPoints,
+            cvSize(win_size,win_size), cvSize(-1,-1),
+            cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS,20,0.03));*/
+	cvReleaseImage( &eig );
+	cvReleaseImage( &temp );
+
+
+	for(int i=0;i<numPoints;i++){
+		CvPoint pt = cvPointFrom32f(points[i]);
+		points[i] = cvPoint2D32f(pt.x+headX,pt.y+headY);
+	}
+
+	return numPoints;
+}
+
+
+//TODO: correct projection matrix
+void setGLProjectionMatrix(double projectionMatrix[16], double focus){
+	double farPlane=10000.0;
+	double nearPlane=1.0;
+	double width = 640;
+	double height = 480;
+	double focalLength = focus;
+	projectionMatrix[0] = 2*focalLength/width;
+	projectionMatrix[1] = 0.0;
+	projectionMatrix[2] = 0.0;
+	projectionMatrix[3] = 0.0;
+
+	projectionMatrix[4] = 0.0;
+	projectionMatrix[5] = 2*focalLength/ height;
+	projectionMatrix[6] = 0.0;
+	projectionMatrix[7] = 0.0;
+
+	projectionMatrix[8] = 0;
+	projectionMatrix[9] = 0;	
+	projectionMatrix[10] = - ( farPlane+nearPlane ) / ( farPlane - nearPlane );;
+	projectionMatrix[11] = -1.0;
+
+	projectionMatrix[12] = 0.0;
+	projectionMatrix[13] = 0.0;
+	projectionMatrix[14] = -2.0 * farPlane * nearPlane / ( farPlane - nearPlane );		
+	projectionMatrix[15] = 0.0;
 
 }
+
+
+
+/* This function is supposed to find the
+ * translation vector to the origin, but does not
+ * seem to be working
+ */
+/*
+void getTranslationToOrigin(double glPositMatrix[16]){
+	//find inverse operation so that displacement can be found
+	//we know that image point at reference for posit, Pio
+	//is related to the world point (Pwo) through:
+	//Pio = KRT Pwo
+	//now, the model origin image point, during initialization is
+	//Pim = KRT Pwm
+	//but we don't know Pwm. In order to find it:
+	//Pwm = KRT^-1 Pim
+	//and then, we can find the translation:
+	//Trans = Pwm - Pwo
+
+	//OpenGl Matrixes are column major
+	float rt[] = { 	glPositMatrix [0], glPositMatrix[4],glPositMatrix[8] ,glPositMatrix[12],
+			glPositMatrix [1], glPositMatrix[5],glPositMatrix[9] ,glPositMatrix[13],
+			glPositMatrix [2], glPositMatrix[6],glPositMatrix[10],glPositMatrix[14],
+			glPositMatrix [3], glPositMatrix[7],glPositMatrix[11],glPositMatrix[15]
+	};
+	CvMat RT=cvMat(4,4,CV_32FC1, rt);
+
+	float k[] = { 	projectionMatrix [0], projectionMatrix[4],projectionMatrix[8] ,projectionMatrix[12],
+			projectionMatrix [1], projectionMatrix[5],projectionMatrix[9] ,projectionMatrix[13],
+			projectionMatrix [2], projectionMatrix[6],projectionMatrix[10],projectionMatrix[14],
+			projectionMatrix [3], projectionMatrix[7],projectionMatrix[11],projectionMatrix[15]
+	};
+
+	CvMat K = cvMat(4,4,CV_32FC1, k);
+
+	float pio[] = { 	lastHeadW+refX,
+			lastHeadH+refY,
+			1,
+			1
+	};
+	CvMat Pio = cvMat(4,1,CV_32FC1,pio);
+
+
+	float pim[] = {	 (refX/320.0)*400,//(lastHeadW-320)/320.0,
+			(refY/240.0)*400,//(lastHeadH-240)/240.0,
+			400,
+			400
+	};
+	printf("pim %f %f %f %f\n",pim[0],pim[1],pim[2],pim[3]);
+
+	CvMat Pim = cvMat(4,1,CV_32FC1,pim);
+
+	float ptest[] = {	0,
+			0,
+			0,
+			1
+	};
+
+	CvMat Ptest = cvMat(4,1,CV_32FC1,ptest);
+	CvMat* Pres =  cvCreateMat(4,1,CV_32FC1);
+
+
+	CvMat* Res  = cvCreateMat(4,4,CV_32FC1);
+	CvMat* invKRT  = cvCreateMat(4,4,CV_32FC1);
+	cvMatMul(&K,&RT,Res);
+
+	cvMatMul(Res,&Ptest,Pres);
+	printf("Test x %f (x/w) %f y %f z %f w %f\n",cvmGet(Pres,0,0),cvmGet(Pres,0,0)/cvmGet(Pres,3,0),cvmGet(Pres,1,0),cvmGet(Pres,2,0),cvmGet(Pres,3,0));
+
+	cvInvert(Res,invKRT);
+
+	printf("Inverse\n");
+	printf("%f %f %f %f\n",cvmGet(invKRT,0,0),cvmGet(invKRT,0,1),cvmGet(invKRT,0,2),cvmGet(invKRT,0,3));
+	CvMat* Pwm = cvCreateMat(4,1,CV_32FC1);
+	cvMatMul(Res,&Ptest,&Pim);
+	cvMatMul(invKRT,&Pim,Pwm);
+	//note that Pwo is 0,0,0, so Trans = Pwm
+
+	float deltaX = cvmGet(Pwm,0,0);
+	float deltaY = cvmGet(Pwm,1,0);
+	float deltaZ = cvmGet(Pwm,2,0);
+	float deltaW = cvmGet(Pwm,3,0);
+
+	//cvReleaseMat(&RT);
+	//cvReleaseMat(&K);
+	//cvReleaseMat(&Pio);
+	//cvReleaseMat(&Pim);
+	cvReleaseMat(&Res);
+	cvReleaseMat(&invKRT);
+	cvReleaseMat(&Pwm);
+	glBegin(GL_LINES);
+	glColor3f(1.0f,1.0f,1.0);
+	glVertex3f(0.0f, 0.0f,0.0f);
+	glVertex3f(deltaX, deltaY,deltaZ);
+
+	glEnd();
+	printf("Delta x %f y %f z %f w %f\n",deltaX,deltaY,deltaZ,deltaW);
+}*/
