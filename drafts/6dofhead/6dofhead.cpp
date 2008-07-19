@@ -205,7 +205,7 @@ void drawHeadModel(){
 		glEnable(GL_NORMALIZE);
 		glNormal3f( nx,ny,nz);
 		glDisable(GL_NORMALIZE);
-		float scale = 1.6667*20.0f;
+		float scale = 1.3*20.0f;
 		
 
 		
