@@ -17,12 +17,15 @@ void getHeadPosition(IplImage* frame, CvPoint* upperHeadCorner,int* headWidth,in
 
 void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matrix, CvVect32f translation_vector,
 		int numOfTrackingPoints,int focus,CvPoint2D32f* points, CvPoint upperHeadCorner, 
-		int headWidth, int headHeight, int* refX, int* refY, float modelScale);
+		int headWidth, int headHeight, float modelScale);
 
 int insertNewPoints(IplImage* grey, int headX,int headY,int width, int height,
 		CvPoint2D32f* points);
 
 void setGLProjectionMatrix(double projectionMatrix[16], double focus);
+
+int cvLoop(double glPositMatrix[16],int initialGuess,int focus,float modelScale, CvCapture* capture,
+		int* refX,int * refY,int* myLastHeadW, int* myLastHeadH);
 
 
 

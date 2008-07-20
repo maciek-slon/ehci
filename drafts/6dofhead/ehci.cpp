@@ -251,7 +251,7 @@ std::vector<CvPoint3D32f> modelPoints;
 
 void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matrix, CvVect32f translation_vector,
 		int numOfTrackingPoints,int focus,CvPoint2D32f* points, CvPoint upperHeadCorner, 
-		int headWidth, int headHeight, int* refX, int* refY, float modelScale){
+		int headWidth, int headHeight, float modelScale){
 
 	int i;
 
@@ -272,12 +272,6 @@ void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matri
 		
 	
 		if(initialGuess){
-			if(i==0){
-				
-				*refX = cvPointFrom32f(points[i]).x-upperHeadCorner.x;//(int)(px/(1.0*headWidth)*100);
-				*refY = cvPointFrom32f(points[i]).y-upperHeadCorner.y;//-(int)(py/(1.0*headHeight)*100);
-				//refZ = 0;//(int)(40*sin(px*3.141593/headWidth));
-			}
 			
 			float fx = (1.6667 * px/(1.0*headWidth)) - 0.332;
 			float fy = (1.6667 * py/(1.0*headHeight)) - 0.332;
@@ -341,7 +335,7 @@ void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matri
 
 
 int insertNewPoints(IplImage* grey, int headX,int headY,int width, int height,
-		CvPoint2D32f* points){
+		CvPoint2D32f* points, int* refX, int* refY){
 	
 	IplImage *result;
 	
@@ -378,7 +372,15 @@ int insertNewPoints(IplImage* grey, int headX,int headY,int width, int height,
 	for(int i=0;i<numPoints;i++){
 		CvPoint pt = cvPointFrom32f(points[i]);
 		points[i] = cvPoint2D32f(pt.x+headX,pt.y+headY);
+		if(i==0){
+			//the reference is the first point in DeMenthon's algorithm
+			*refX = pt.x;
+			*refY = pt.y;
+			printf("************ HeadX %d headY %d pt.x %d\n",headX,headY,pt.x);
+		}
 	}
+	
+	
 
 	return numPoints;
 }
@@ -411,6 +413,136 @@ void setGLProjectionMatrix(double projectionMatrix[16], double focus){
 	projectionMatrix[14] = -2.0 * farPlane * nearPlane / ( farPlane - nearPlane );		
 	projectionMatrix[15] = 0.0;
 
+}
+
+/*
+ * This function detects where the head is and returns the openGL matrix associated 
+ * in case it doesn't work (if the grabed image was too dark, or if it was one of 
+ * the first frames, during initialization), it will return 0. It returns 1 otherwise
+ */
+#define READFROMIMAGEFILE 0
+#define NUMPTS 8
+
+IplImage *image = 0, *grey = 0, *prev_grey = 0, *pyramid = 0, *prev_pyramid = 0, *swap_temp;
+const int MAX_COUNT = 500;
+CvPoint2D32f* points[2] = {0,0}, *swap_points;
+char* status = 0;
+CvPoint upperHeadCorner = cvPoint(0,0);
+
+
+int lastHeadW, lastHeadH;
+int win_size = 10;
+
+int cvLoop(double glPositMatrix[16],int initialGuess, int focus,float modelScale , CvCapture* capture,
+		int* refX,int * refY, int* myLastHeadW, int* myLastHeadH){
+
+	static int flags = 0;
+
+	IplImage* frame = 0;
+	int i, k, c;
+	static int numberOfTrackingPoints=0;
+	int headWidth, headHeight;
+
+
+
+	if(READFROMIMAGEFILE){
+		frame = cvLoadImage( "head.jpg", 1 );
+	}
+	else{
+		frame = cvQueryFrame( capture );
+		if( !frame )
+			return 0;
+	}
+
+	if( !image )
+	{
+		/* allocate all the buffers */
+		image = cvCreateImage( cvGetSize(frame), 8, 3 );
+		image->origin = frame->origin;
+		grey = cvCreateImage( cvGetSize(frame), 8, 1 );
+		prev_grey = cvCreateImage( cvGetSize(frame), 8, 1 );
+		pyramid = cvCreateImage( cvGetSize(frame), 8, 1 );
+		prev_pyramid = cvCreateImage( cvGetSize(frame), 8, 1 );
+		points[0] = (CvPoint2D32f*)cvAlloc(MAX_COUNT*sizeof(points[0][0]));
+		points[1] = (CvPoint2D32f*)cvAlloc(MAX_COUNT*sizeof(points[0][0]));
+		status = (char*)cvAlloc(MAX_COUNT);
+		flags = 0;
+	}
+
+	cvCopy( frame, image, 0 );
+	cvCvtColor( image, grey, CV_BGR2GRAY );
+
+
+	getHeadPosition(image, &upperHeadCorner,&headWidth,&headHeight );
+
+
+	printf("Head x %d head y %d width %d height %d\n",upperHeadCorner.x,upperHeadCorner.y,headWidth,headHeight);	
+
+	if(initialGuess){
+		//automatic initialization won't work in case face was not detected
+		if((headWidth == 0) || (headHeight==0)) return 0;				
+		if((upperHeadCorner.x>=0)&&(upperHeadCorner.y>=0)&&
+				(upperHeadCorner.x+headWidth< cvGetSize(grey).width) && (upperHeadCorner.y+headHeight< cvGetSize(grey).height))
+			numberOfTrackingPoints = insertNewPoints(grey,upperHeadCorner.x+(int)(0.25*headWidth),upperHeadCorner.y+(int)(0.25*headHeight),
+					(int)(headWidth*0.5),(int)(headHeight*0.5),points[0],refX,refY);	
+		*refX = cvPointFrom32f(points[0][0]).x - upperHeadCorner.x;
+		*refY = cvPointFrom32f(points[0][0]).y - upperHeadCorner.y;
+		lastHeadW = headWidth;
+		lastHeadH = headHeight;
+	}
+	*myLastHeadW = lastHeadW;
+	*myLastHeadH = lastHeadH;
+
+
+	if( numberOfTrackingPoints > 0 )
+	{
+		cvCalcOpticalFlowPyrLK( prev_grey, grey, prev_pyramid, pyramid,
+				points[0], points[1], numberOfTrackingPoints, cvSize(win_size,win_size), 3, status, 0,
+				cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS,20,0.03), flags );
+		flags |= CV_LKFLOW_PYR_A_READY;
+		for( i = k = 0; i < numberOfTrackingPoints; i++ )
+		{
+
+			if( !status[i] )
+				continue;
+
+			points[1][k++] = points[1][i];
+			cvCircle( image, cvPointFrom32f(points[1][i]), 3, CV_RGB(0,200+20*i,0), -1, 8,0);
+		}
+		numberOfTrackingPoints = k;
+	}
+	
+
+
+
+
+	CvMatr32f rotation_matrix = new float[9];
+	CvVect32f translation_vector = new float[3];
+
+
+	if(numberOfTrackingPoints >=NUMPTS){
+		//getPositMatrix uses points[1] obtained from cvCalcOpticalFlowPyrLK
+		getPositMatrix(image,initialGuess, rotation_matrix,translation_vector,
+				numberOfTrackingPoints,focus,points[1],upperHeadCorner,
+				headWidth,headHeight,modelScale);
+		updateGlPositMatrix(rotation_matrix,translation_vector,glPositMatrix);	
+
+	}
+	printf("Number of tracking points %d %d\n",numberOfTrackingPoints,initialGuess);
+
+	CV_SWAP( prev_grey, grey, swap_temp );
+	CV_SWAP( prev_pyramid, pyramid, swap_temp );
+	CV_SWAP( points[0], points[1], swap_points );
+
+
+	cvShowImage( "6dofHead", image );
+
+	c = cvWaitKey(10);
+
+	if(numberOfTrackingPoints<NUMPTS)
+		return 0;
+	else
+		return 1;
 }
 
 
