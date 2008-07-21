@@ -310,8 +310,7 @@ void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matri
 	}
 
 	
-	if(modelPoints.size()==numOfTrackingPoints){
-		printf("Creating posit with %d points\n",modelPoints.size());
+	if(modelPoints.size()==numOfTrackingPoints){		
 		CvPOSITObject *positObject = cvCreatePOSITObject( &modelPoints[0], static_cast<int>(modelPoints.size()) );
 
 
@@ -335,7 +334,7 @@ void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matri
 
 
 int insertNewPoints(IplImage* grey, int headX,int headY,int width, int height,
-		CvPoint2D32f* points, int* refX, int* refY){
+		CvPoint2D32f* points){
 	
 	IplImage *result;
 	
@@ -368,19 +367,10 @@ int insertNewPoints(IplImage* grey, int headX,int headY,int width, int height,
 	cvReleaseImage( &eig );
 	cvReleaseImage( &temp );
 
-
 	for(int i=0;i<numPoints;i++){
 		CvPoint pt = cvPointFrom32f(points[i]);
-		points[i] = cvPoint2D32f(pt.x+headX,pt.y+headY);
-		if(i==0){
-			//the reference is the first point in DeMenthon's algorithm
-			*refX = pt.x;
-			*refY = pt.y;
-			printf("************ HeadX %d headY %d pt.x %d\n",headX,headY,pt.x);
-		}
-	}
-	
-	
+		points[i] = cvPoint2D32f(pt.x+headX,pt.y+headY);		
+	}	
 
 	return numPoints;
 }
@@ -474,24 +464,23 @@ int cvLoop(double glPositMatrix[16],int initialGuess, int focus,float modelScale
 
 
 	getHeadPosition(image, &upperHeadCorner,&headWidth,&headHeight );
-
-
-	printf("Head x %d head y %d width %d height %d\n",upperHeadCorner.x,upperHeadCorner.y,headWidth,headHeight);	
+	
 
 	if(initialGuess){
 		//automatic initialization won't work in case face was not detected
-		if((headWidth == 0) || (headHeight==0)) return 0;				
+		if((headWidth <= 0) || (headHeight<=0)) return 0;				
 		if((upperHeadCorner.x>=0)&&(upperHeadCorner.y>=0)&&
 				(upperHeadCorner.x+headWidth< cvGetSize(grey).width) && (upperHeadCorner.y+headHeight< cvGetSize(grey).height))
 			numberOfTrackingPoints = insertNewPoints(grey,upperHeadCorner.x+(int)(0.25*headWidth),upperHeadCorner.y+(int)(0.25*headHeight),
-					(int)(headWidth*0.5),(int)(headHeight*0.5),points[0],refX,refY);	
+					(int)(headWidth*0.5),(int)(headHeight*0.5),points[0]);	
 		*refX = cvPointFrom32f(points[0][0]).x - upperHeadCorner.x;
 		*refY = cvPointFrom32f(points[0][0]).y - upperHeadCorner.y;
 		lastHeadW = headWidth;
 		lastHeadH = headHeight;
+		*myLastHeadW = lastHeadW;
+		*myLastHeadH = lastHeadH;
 	}
-	*myLastHeadW = lastHeadW;
-	*myLastHeadH = lastHeadH;
+	
 
 
 	if( numberOfTrackingPoints > 0 )
@@ -507,7 +496,10 @@ int cvLoop(double glPositMatrix[16],int initialGuess, int focus,float modelScale
 				continue;
 
 			points[1][k++] = points[1][i];
-			cvCircle( image, cvPointFrom32f(points[1][i]), 3, CV_RGB(0,200+20*i,0), -1, 8,0);
+			//draws points on image for debugging
+			cvCircle( image, cvPointFrom32f(points[1][i]), 4, CV_RGB(0,0,0), 0, 8,0);
+			cvCircle( image, cvPointFrom32f(points[1][i]), 3, CV_RGB(200,0,0), 0, 8,0);
+			
 		}
 		numberOfTrackingPoints = k;
 	}
@@ -528,7 +520,6 @@ int cvLoop(double glPositMatrix[16],int initialGuess, int focus,float modelScale
 		updateGlPositMatrix(rotation_matrix,translation_vector,glPositMatrix);	
 
 	}
-	printf("Number of tracking points %d %d\n",numberOfTrackingPoints,initialGuess);
 
 	CV_SWAP( prev_grey, grey, swap_temp );
 	CV_SWAP( prev_pyramid, pyramid, swap_temp );
