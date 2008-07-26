@@ -1,38 +1,33 @@
-AC_INIT([ehci], [1.0], [danielbaggio@gmail.com])
+AC_INIT([ehci], [0.3], [danielbaggio@gmail.com],[ehci])
+
+AC_CONFIG_SRCDIR([lib/ehci.cpp])
+
 AC_CONFIG_AUX_DIR([build-aux])
+
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
-PKG_CHECK_MODULES(DEPS, opencv >= 1.1.0)
-AC_SUBST(DEPS_CFLAGS)
-AC_SUBST(DEPS_LIBS)
+
+AC_CONFIG_HEADER([ehciconfig.h])
 
 
-AC_CHECK_HEADERS(GL/gl.h GL/glu.h,,
-         [AC_CHECK_HEADERS(OpenGL/gl.h OpenGL/glu.h,,
-           [echo "OpenGL is mandatory";exit 1])]
-)
 
-if test `uname -s` != Darwin;
-then
-AC_CHECK_LIB(GL, glInitNames,,
-     AC_CHECK_LIB(MesaGL,glInitNames,,
-            echo "OpenGL is mandatory";exit 1)
-)
-
-dnl Check for GLU (Original or Mesa)
-AC_CHECK_LIB(GLU, gluLookAt, ,
-     AC_CHECK_LIB(MesaGLU,gluLookAt,,
-     echo "incomplete OpenGL (no GLU)";exit 1)
-)
-fi
-
-
-AC_CHECK_LIB([efence], [malloc], [EFENCELIB=-lefence])
-AC_SUBST([EFENCELIB])
-
-
-AC_PROG_LIBTOOL
 AC_PROG_CC
-AC_CONFIG_HEADERS([ehciconfig.h])
-AC_CONFIG_FILES([Makefile lib/Makefile samples/Makefile])
+AM_DISABLE_STATIC
+AC_LIBTOOL_WIN32_DLL
+AM_PROG_LIBTOOL
+
+AM_PROG_AS
+
+###################################
+# Checking for required libraries #
+###################################
+
+PKG_CHECK_MODULES(OPENCV, opencv >= 1.1.0)
+AC_SUBST(OPENCV_CFLAGS)
+AC_SUBST(OPENCV_LIBS)
+AX_CHECK_GL
+AX_CHECK_GLUT
+
+
+AC_CONFIG_FILES([Makefile lib/Makefile samples/Makefile data/Makefile])
 AC_OUTPUT
 
