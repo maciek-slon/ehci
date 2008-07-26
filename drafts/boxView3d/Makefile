@@ -1,8 +1,8 @@
 #NOTICE: You must have opencv from sourceforge's cvs
 APP      = boxView3d
 CC       = g++
-CFLAGS   = -O3 -I /usr/local/include/opencv/ 
-LDFLAGS  = -L /usr/local/lib/ -lGL -lglut -lcv -lhighgui -lcvaux  -lml -lcxcore 
+CFLAGS   = -O3 -I /usr/local/include/opencv/ -I ./../../lib/
+LDFLAGS  = -L /usr/local/lib/ -lGL -lglut -lcv -lhighgui -lcvaux  -lml -lcxcore -L ./../../lib/ -lehci
 SRCS     = boxView3d.cpp
 OBJS     = $(SRCS:.cpp=.o)
 

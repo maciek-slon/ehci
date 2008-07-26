@@ -1,1 +1,3 @@
-SUBDIRS = lib samples
+ACLOCAL_AMFLAGS = -I m4
+SUBDIRS = lib data samples
+

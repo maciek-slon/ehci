@@ -101,7 +101,7 @@ void loadRaw(char* file){
 	float p1[3],p2[3],p3[3];
 	FILE* in = fopen("data/head.raw","r");
 	if(!in){
-		printf("Cannot find head.raw file with head vertices\n");
+		printf("Cannot find head.raw file with head vertices. This file should be in a subdirectory data in the directory from which the application is being run.\n");
 		exit(EXIT_FAILURE);
 	}
 	char temp[200];

@@ -7,6 +7,7 @@ Project homepage: http://code.google.com/p/ehci/
 
 #include "cv.h"
 #include "highgui.h"
+#include "ehci.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -131,42 +132,40 @@ void detect_and_draw( IplImage* img )
     if( cascade )
     {
         double t = (double)cvGetTickCount();
-        CvSeq* faces = cvHaarDetectObjects( small_img, cascade, storage,
-                                            1.2, 2, CV_HAAR_FIND_BIGGEST_OBJECT,
-                                            cvSize(40, 40) );
-        t = (double)cvGetTickCount() - t;
-        printf( "detection time = %gms\n", t/((double)cvGetTickFrequency()*1000.) );
-        for( i = 0; i < (faces ? faces->total : 0); i++ )
-        {
-            CvRect* r = (CvRect*)cvGetSeqElem( faces, i );
-            CvPoint center;
-            CvPoint p1,p2;
-            p1.x = r->x*scale; p1.y = r->y*scale;
-	    //	    p2.x = p1.x +5; p2.y = p1.y + 5;
-	    p2.x = (r->x + r->width)*scale; p2.y = (r->y + r->height)*scale;
-	    cvRectangle(img,p1,p2,colors[i%8],1,8,0);
-            int radius;
-            center.x = cvRound((r->x + r->width*0.5)*scale);
-            center.y = cvRound((r->y + r->height*0.5)*scale);
+		int detectedHeadWidth,detectedHeadHeight;
+		CvPoint upperHeadCorner;
+
+		getHeadPosition(img, &upperHeadCorner,&detectedHeadWidth,&detectedHeadHeight );
+
+/*		CvRect* r = (CvRect*)cvGetSeqElem( faces, i );
+		CvPoint center;
+		CvPoint p1,p2;
+		p1.x = r->x*scale; p1.y = r->y*scale;
+		p2.x = (r->x + r->width)*scale; p2.y = (r->y + r->height)*scale;
+		cvRectangle(img,p1,p2,colors[i%8],1,8,0);
+		int radius;
+		center.x = cvRound((r->x + r->width*0.5)*scale);
+		center.y = cvRound((r->y + r->height*0.5)*scale);
 
 
-  //angle = r->width
-	    double x1 = r->x*scale;
-	    double x2 = (r->x+r->width)*scale;
+		double x1 = r->x*scale;
+		double x2 = (r->x+r->width)*scale;*/
 	    
-	    double angle = (r->width)*scale * horizontalGradesPerPixel * 3.141592654/180;
-	    headDist = (headWidth/2) / (tan(angle/2)); //in meters
-	    for(int i=MEANWINDOW-1;i>0;i--)
+		double angle = detectedHeadWidth * horizontalGradesPerPixel * 3.141592654/180;
+		headDist = (headWidth/2) / (tan(angle/2)); //in meters
+
+/*	    for(int i=MEANWINDOW-1;i>0;i--)
 		headHist[i]=headHist[i-1];
 	    headHist[0]=headDist;
 	    double headMean=0;
 	    for(int i=0;i<MEANWINDOW;i++) headMean+=headHist[i];
-	    headDist=headMean/MEANWINDOW;
-	    double xAngle = ((img->width)/2.0 - ((r->x+r->width*0.5)*scale)) * horizontalGradesPerPixel * 3.141592654/180;
+	    headDist=headMean/MEANWINDOW;*/
+
+	    double xAngle = ((img->width)/2.0 - (upperHeadCorner.x+detectedHeadWidth/2)) * horizontalGradesPerPixel * 3.141592654/180;
 	    headX =  tan(xAngle) * headDist;
-	    double yAngle = ((img->height)/2.0 -((r->y+r->height*0.5)*scale)) * verticalGradesPerPixel * 3.141592654/180;
+	    double yAngle = ((img->height)/2.0 -(upperHeadCorner.y+detectedHeadHeight/2)) * verticalGradesPerPixel * 3.141592654/180;
 	    headY = tan(yAngle) * headDist;
-	    printf("HeadX = %.4lfm HeadY = %.4lfm HeadZ = %.4lfm pix %lf\n",headX,headY,headDist,(img->width)/2.0 - ((r->x+r->width*0.5)*scale));
+	    //printf("HeadX = %.4lfm HeadY = %.4lfm HeadZ = %.4lfm pix %lf\n",headX,headY,headDist,(img->width)/2.0 - ((r->x+r->width*0.5)*scale));
 	    
 
 
@@ -174,7 +173,7 @@ void detect_and_draw( IplImage* img )
 	    headY = center.y;	    
             radius = cvRound((r->width + r->height)*0.25*scale);
             cvCircle( img, center, radius, colors[i%8], 3, 8, 0 );*/
-        }
+//        }
     }
 
     cvShowImage( "result", img );

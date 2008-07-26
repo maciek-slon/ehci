@@ -14,7 +14,7 @@ void loadCascade(CvHaarClassifierCascade** cascade){
 	*cascade = (CvHaarClassifierCascade*)cvLoad( "data/haarcascade_frontalface_default.xml", 0, 0, 0 );
 	
 	if( !(*cascade) ){
-		printf( "ERROR: Could not load classifier cascade. The required file 'haarcascade_frontalface_default.xml' should be in a 'data' subdirectory under the directory in which the application is.\n" );
+		printf( "ERROR: Could not load classifier cascade. The required file 'haarcascade_frontalface_default.xml' should be in a 'data' subdirectory under the directory in which the application is being run.\n" );
 		exit(1);
 	}	
 
