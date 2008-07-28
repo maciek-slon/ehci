@@ -358,7 +358,7 @@ int insertNewPoints(IplImage* grey, int headX,int headY,int width, int height,
 	double quality = 0.01;
 	double min_distance = 10;
 
-	int numPoints = 10;//MAX_COUNT;
+	int numPoints = 20;//MAX_COUNT;
 	cvGoodFeaturesToTrack( result, eig, temp, points, &numPoints,
 			quality, min_distance, 0, 3, 0, 0.04 );	    	
 	//TODO: ENABLE SUBPIX AFTER TESTS  
