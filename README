@@ -6,6 +6,8 @@ Enhanced Human Computer Interface (EHCI) is a C++ webcam image processing librar
 
 The development of this library was sponsored by Google (R) in 2008 Google Summer of Code.
 
+For instructions on how to install, please refer to the document INSTALL.
+
 
 1. Web resources
 ================
