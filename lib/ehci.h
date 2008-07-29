@@ -27,6 +27,11 @@ void setGLProjectionMatrix(double projectionMatrix[16], double focus);
 int cvLoop(double glPositMatrix[16],int initialGuess,int focus,float modelScale, CvCapture* capture,
 		int* refX,int * refY,int* myLastHeadW, int* myLastHeadH);
 
+//returns last captured frame
+IplImage* getCurrentFrame();
+
+
+
 
 
 

@@ -425,17 +425,23 @@ CvPoint upperHeadCorner = cvPoint(0,0);
 int lastHeadW, lastHeadH;
 int win_size = 10;
 
+IplImage* frame;
+
+IplImage* getCurrentFrame(){
+	return frame;
+}
+
 int cvLoop(double glPositMatrix[16],int initialGuess, int focus,float modelScale , CvCapture* capture,
 		int* refX,int * refY, int* myLastHeadW, int* myLastHeadH){
 
 	static int flags = 0;
 
-	IplImage* frame = 0;
+	
 	int i, k, c;
 	static int numberOfTrackingPoints=0;
 	int headWidth, headHeight;
 
-
+	frame = 0;
 	if(READFROMIMAGEFILE){
 		frame = cvLoadImage( "head.jpg", 1 );
 	}

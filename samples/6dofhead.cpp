@@ -22,23 +22,23 @@ GLfloat LightDiffuse[] = { 0.8f, 0.8f, 0.8, 1.0f };
 
 GLfloat LightSpecular[] = { 0.5f, 0.5f, 0.5f, 1.0f };
 
-
 /* position of light (x, y, z, (position of light)) */
 GLfloat LightPosition[] = { 0.0f, 0.0f, 500.0f, 1.0f };
+
+//openGl texture to store grabbed frame
+GLuint	frameTexture;
 
 
 /* The number of our GLUT window */
 int window;  
 
 CvCapture* capture = 0;
-
 double projectionMatrix[16];
 
 
 int initialGuess=1;
-int drawSine=0,drawAxis=0,drawNormals=0,drawLight=1;
+int drawSine=0,drawAxis=0,drawNormals=0,blending=0,drawLight=1;
 int aLastHeadW, aLastHeadH;
-
 int headRefX,headRefY;
 
 struct triangle{
@@ -47,6 +47,7 @@ struct triangle{
 
 triangle triangles[3036];
 
+void drawGrabbedFrame();
 
 void drawHelpText(){
 	int* font = (int*)GLUT_BITMAP_HELVETICA_10;
@@ -55,7 +56,7 @@ void drawHelpText(){
 	glMatrixMode (GL_PROJECTION);
 	glLoadIdentity ();
 	
-	glOrtho (0, XSize, YSize, 0, 0, 1);
+	glOrtho (0, XSize, YSize, 0, 0.0001, 1000);
 	glMatrixMode (GL_MODELVIEW);
 	glLoadIdentity ();
 	
@@ -65,6 +66,8 @@ void drawHelpText(){
 	glRasterPos2f(10, 20);
 	const unsigned char text[] ="Press I to reinitialize. You must focus this window\n(face the camera in a still position)";
 	glutBitmapString(font, text);
+	
+	
 }
 
 void drawReferenceAxis(){
@@ -205,8 +208,9 @@ void drawHeadModel(float scale,int headWidth,int headHeight, int myRefX,int myRe
 			glEnd();
 		}
 		
+		
 		glBegin(GL_TRIANGLES);
-		glColor3d (0.0, 0.0, 1.0);
+		glColor4d (0.0, 0.0, 1.0,0.8);
 		
 		for(int j=0;j<3;j++){
 			glVertex3f(	scale* (triangles[i].vert[j][0]+deltaX),
@@ -220,7 +224,117 @@ void drawHeadModel(float scale,int headWidth,int headHeight, int myRefX,int myRe
 }
 
 
+void checkTransparency(){
+	//dealing with transparency
+	if(blending){
+		glEnable (GL_BLEND); 
+		//glDisable(GL_DEPTH_TEST);
+		glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	}
+	else{
+		glDisable (GL_BLEND);
+		glEnable(GL_DEPTH_TEST);
+	}
+}
 
+/*
+ * grabs frame from webcam and loads it in an OpenGL texture
+ */
+
+void getFrameAsGLTexture(){
+ 	
+	IplImage* currentFrame = getCurrentFrame();
+
+    // texture 1 (poor quality scaling)
+    glBindTexture(GL_TEXTURE_2D, frameTexture);   // 2d texture (x and y size)
+
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR); // scale linearly when image bigger than texture
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR); // scale linearly when image smalled than texture
+    
+    //glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST); 
+    //glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST); 
+
+    // 2d texture, level of detail 0 (normal), 3 components (red, green, blue), x size from image, y size from image, 
+    // border 0 (normal), rgb color data, unsigned byte data, and finally the data itself.
+    glTexImage2D(GL_TEXTURE_2D, 0, 3, currentFrame->width, currentFrame->height,
+    		0, GL_BGR, GL_UNSIGNED_BYTE, currentFrame->imageData);
+}
+
+void drawGrabbedFrame(){
+	
+	getFrameAsGLTexture();
+	
+	glBindTexture(GL_TEXTURE_2D, frameTexture);   // choose the texture to use.
+	
+	glDisable(GL_LIGHTING);
+	
+	glMatrixMode(GL_PROJECTION);
+			
+			glLoadIdentity();
+			
+			glMatrixMode( GL_MODELVIEW );
+	
+
+	glLoadIdentity();
+	
+	glBegin(GL_QUADS);		                
+			    
+			    // Front Face (note that the texture's corners have to match the quad's corners)
+			    glNormal3f( 0.0f, 0.0f, 1.0f);                              // front face points out of the screen on z.
+			    glColor4f(1.0f,1.0f,1.0f,1.0f);
+
+			    
+			    glTexCoord2f(0.0f, 1.0f);			    			    
+			    glVertex3f(-1.0f, -1.0,  0.0f);	// Bottom Left Of The Texture and Quad
+			    
+			    
+			    glTexCoord2f(1.0f, 1.0f);
+			    glVertex3f( 1.0f, -1.0,  0.0f);	// Bottom Right Of The Texture and Quad
+			    
+			    
+			    
+			    
+			    glTexCoord2f(1.0f, 0.0f);
+			    glVertex3f( 1.0f,  1.0f, 0.0f);	// Top Right Of The Texture and Quad
+			    		    
+			    
+			    glTexCoord2f(0.0f, 0.0f);
+			    glVertex3f( -1.0f,  1.0f,  0.0f);
+		glEnd();
+		glClear(GL_DEPTH_BUFFER_BIT);
+	/*
+	glBegin(GL_QUADS);		                
+		    
+		    // Front Face (note that the texture's corners have to match the quad's corners)
+		    glNormal3f( 0.0f, 0.0f, 1.0f);                              // front face points out of the screen on z.
+		    glColor4f(1.0f,1.0f,1.0f,1.0f);
+		    glTexCoord2f(0.0f, 0.0f);
+		    
+		    glVertex3f(0, 0,  1.0f);	// Bottom Left Of The Texture and Quad
+		    
+		    
+		    glTexCoord2f(1.0f, 0.0f);
+		    glVertex3f( 640, 0,  1.0f);	// Bottom Right Of The Texture and Quad
+		    
+		    
+		    
+		    glTexCoord2f(1.0f, 1.0f); 
+		    glVertex3f( 640,  480,  -1);	// Top Right Of The Texture and Quad
+		    		    
+		    
+		    glTexCoord2f(0.0f, 1.0f);
+		    glVertex3f(0,  480,  -1);
+	glEnd();
+	*/
+	
+	if (!drawLight) {
+				glDisable(GL_LIGHTING);
+			} else {
+				glEnable(GL_LIGHTING);
+			}
+
+	
+}
 
 /* The main drawing function. */
 void DrawGLScene(void)
@@ -235,8 +349,14 @@ void DrawGLScene(void)
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glLoadIdentity();
 	
+
+	checkTransparency();
 	
 	
+		
+	
+	drawHelpText();
+	//drawGrabbedFrame();
 	
 	
 	
@@ -278,6 +398,9 @@ void DrawGLScene(void)
 	}
 	else{
 		
+		
+		drawGrabbedFrame();
+		
 		//loads reference point pose into OpenGL modelview matrix
 		
 
@@ -302,15 +425,20 @@ void DrawGLScene(void)
 		
 		//scale should be the same as Sinusoidal, but the head 
 		//is 5 units wide, so it's 5 times lower
-		drawHeadModel(1.6*MODELSCALE/5.0f,aLastHeadW,aLastHeadH,headRefX,headRefY);
+		drawHeadModel(1.6*MODELSCALE/5.0f,aLastHeadW,aLastHeadH,headRefX,headRefY);		
 		
-		//glLoadIdentity();
+
+		
+		
+		
+		
+		
 		//glTranslatef(200.0,0,0.0f);
 		//glutWireSphere(80.0, 200, 200);
-	}
-	
-	drawHelpText();
+	}	
 
+
+	
 	glutSwapBuffers();
 
 	//automatic reinitialization
@@ -351,6 +479,10 @@ void keyPressed(unsigned char key, int x, int y)
 		break;
 	case 's':
 		drawSine = !drawSine;
+		break;
+	case 'b':
+	case 'B':
+		blending = !blending;
 		break;
 	case 'n':
 	case 'N':
@@ -431,6 +563,10 @@ void InitGL(GLsizei Width, GLsizei Height)	// We call this right after our OpenG
 	glLightfv(GL_LIGHT1, GL_DIFFUSE, LightDiffuse);  // add lighting. (diffuse).
 	glEnable(GL_LIGHT1);                             // turn light 1 on.
 	glEnable(GL_LIGHTING);
+	
+	//generate texture
+    glGenTextures(1, &frameTexture);    
+
 }
 
 void openGLCustomInit(int argc, char** argv ){
