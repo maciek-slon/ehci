@@ -48,7 +48,7 @@ struct triangle{
 triangle triangles[3036];
 
 
-void drawHelpTest(){
+void drawHelpText(){
 	int* font = (int*)GLUT_BITMAP_HELVETICA_10;
 	
 	int XSize = 640, YSize = 480;
@@ -309,7 +309,7 @@ void DrawGLScene(void)
 		//glutWireSphere(80.0, 200, 200);
 	}
 	
-	drawHelpTest();
+	drawHelpText();
 
 	glutSwapBuffers();
 
