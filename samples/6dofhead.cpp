@@ -47,25 +47,49 @@ struct triangle{
 
 triangle triangles[3036];
 
+void checkTransparency();
 void drawGrabbedFrame();
 
 void drawHelpText(){
-	int* font = (int*)GLUT_BITMAP_HELVETICA_10;
+	int* font = (int*)GLUT_BITMAP_HELVETICA_12;
+    //glClear(GL_DEPTH_BUFFER_BIT);
+	glDisable(GL_DEPTH_TEST);	
+	glDisable(GL_LIGHTING);
+	
 	
 	int XSize = 640, YSize = 480;
 	glMatrixMode (GL_PROJECTION);
 	glLoadIdentity ();
 	
-	glOrtho (0, XSize, YSize, 0, 0.0001, 1000);
+	glOrtho (0, XSize, YSize, 0, 0, 1);
 	glMatrixMode (GL_MODELVIEW);
 	glLoadIdentity ();
 	
 
 	glColor3f(255.0f,255.0f,255.0f);
+	glBegin(GL_QUADS);
+		glVertex2f(10, 10);
+		glVertex2f(290, 10);
+		glVertex2f(290, 40); 
+		glVertex2f(10, 40);
+	glEnd();
+
+	
+	glColor3f(0.0f,0.0f,0.0f);
 	
 	glRasterPos2f(10, 20);
 	const unsigned char text[] ="Press I to reinitialize. You must focus this window\n(face the camera in a still position)";
 	glutBitmapString(font, text);
+	
+	if (!drawLight) {
+		glDisable(GL_LIGHTING);
+	} else {
+		glEnable(GL_LIGHTING);
+	}
+	
+	glEnable(GL_DEPTH_TEST);	
+
+	
 	
 	
 }
@@ -210,7 +234,7 @@ void drawHeadModel(float scale,int headWidth,int headHeight, int myRefX,int myRe
 		
 		
 		glBegin(GL_TRIANGLES);
-		glColor4d (0.0, 0.0, 1.0,0.8);
+		glColor4d (0.0, 0.0, 1.0,0.65);
 		
 		for(int j=0;j<3;j++){
 			glVertex3f(	scale* (triangles[i].vert[j][0]+deltaX),
@@ -241,7 +265,7 @@ void checkTransparency(){
  * grabs frame from webcam and loads it in an OpenGL texture
  */
 
-void getFrameAsGLTexture(){
+void getFrameAsGLTexture(){	
  	
 	IplImage* currentFrame = getCurrentFrame();
 
@@ -327,11 +351,11 @@ void drawGrabbedFrame(){
 	glEnd();
 	*/
 	
-	if (!drawLight) {
-				glDisable(GL_LIGHTING);
-			} else {
-				glEnable(GL_LIGHTING);
-			}
+		if (!drawLight) {
+						glDisable(GL_LIGHTING);
+					} else {
+						glEnable(GL_LIGHTING);
+					}
 
 	
 }
@@ -345,9 +369,15 @@ void DrawGLScene(void)
 	int detected = cvLoop(glPositMatrix,initialGuess,MYFOCUS,MODELSCALE,capture,
 			&headRefX,&headRefY,&aLastHeadW, &aLastHeadH);
 	
-
+	
+	
+	
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glLoadIdentity();
+	
+		
+	
+	
 	
 
 	checkTransparency();
@@ -355,8 +385,8 @@ void DrawGLScene(void)
 	
 		
 	
-	drawHelpText();
-	//drawGrabbedFrame();
+	
+	drawGrabbedFrame();
 	
 	
 	
@@ -366,7 +396,7 @@ void DrawGLScene(void)
 		updateGlPositMatrix(rotation_matrix,translation_vector,glPositMatrix);	
 	}
 	
-
+	
 	if(initialGuess){		
 		//TODO: get points from orthogonal view
 		/*
@@ -399,7 +429,7 @@ void DrawGLScene(void)
 	else{
 		
 		
-		drawGrabbedFrame();
+		//drawGrabbedFrame();
 		
 		//loads reference point pose into OpenGL modelview matrix
 		
@@ -425,6 +455,7 @@ void DrawGLScene(void)
 		
 		//scale should be the same as Sinusoidal, but the head 
 		//is 5 units wide, so it's 5 times lower
+		
 		drawHeadModel(1.6*MODELSCALE/5.0f,aLastHeadW,aLastHeadH,headRefX,headRefY);		
 		
 
@@ -437,7 +468,7 @@ void DrawGLScene(void)
 		//glutWireSphere(80.0, 200, 200);
 	}	
 
-
+	drawHelpText();
 	
 	glutSwapBuffers();
 
