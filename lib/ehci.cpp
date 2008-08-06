@@ -5,7 +5,7 @@
 
 
 /**
- * loads cascade xml
+ * Loads cascade xml
  */
 void loadCascade(CvHaarClassifierCascade** cascade){	
 
@@ -19,8 +19,11 @@ void loadCascade(CvHaarClassifierCascade** cascade){
 
 }
 
-
-
+/**
+ * Optimized function to detect head position and draw a rectangle around it.
+ * This function uses OpenCV implemented Viola-Jones algorithm with 
+ * Haar-like features and trained cascades. Refer to OpenCV documentation.
+ */
 int detect_and_draw( IplImage* img,CvPoint* upperHeadCorner,int* headWidth,int* headHeight,CvHaarClassifierCascade* cascade, 
 		CvMemStorage* storage)
 {
@@ -127,8 +130,8 @@ void updateGlPositMatrix(CvMatr32f rotation_matrix,CvVect32f translation_vector)
 
 }
 
-/*
- *copies currently detected posit matrix (translation and rotation)
+/**
+ *Copies currently detected posit matrix (translation and rotation)
  *in the openGl format to the parameter array  
  */
 
@@ -256,7 +259,9 @@ void printMatrixData(CvMatr32f rotation_matrix, CvVect32f translation_vector){
 
 
 
-/*
+std::vector<CvPoint3D32f> modelPoints;
+
+/**
  * This function will retrieve the rotation and translation matrixes 
  * using the POSIT algorithm
  * In case the initialGuess parameter is set to 1, the algorithm will
@@ -265,8 +270,6 @@ void printMatrixData(CvMatr32f rotation_matrix, CvVect32f translation_vector){
  * to the current head position 
  * 
  */
-
-std::vector<CvPoint3D32f> modelPoints;
 
 void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matrix, CvVect32f translation_vector,
 		int numOfTrackingPoints,int focus,CvPoint2D32f* points, CvPoint upperHeadCorner, 
