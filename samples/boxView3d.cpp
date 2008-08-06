@@ -29,8 +29,6 @@ Project homepage: http://code.google.com/p/ehci/
 #define MEANWINDOW 5
 double headHist[MEANWINDOW];
 
-//#define CV_HAAR_FIND_BIGGEST_OBJECT
-
 
 CvCapture* capture = 0;
 IplImage *frame, *frame_copy = 0;
