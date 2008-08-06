@@ -1,0 +1,13 @@
+# Package Information for pkg-config
+
+prefix=/usr/local
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include/ehci
+
+Name: EHCI
+Description: Enhanced Human Computer Interface library
+Requires: opencv
+Version: 0.3
+Libs: -L${libdir} -lehci
+Cflags: -I${includedir}
