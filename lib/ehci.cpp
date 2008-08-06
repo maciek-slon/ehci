@@ -643,7 +643,7 @@ int ehciLoop(int mode,int initialGuess){
 	
 
 
-	if((mode & EHCI6DFACEDETECT)&&(detectedHead)){
+	if((mode & EHCI6DFACEDETECT)){
 		update6dof(headHeight, headWidth, initialGuess,numberOfTrackingPoints);
 	}
 
