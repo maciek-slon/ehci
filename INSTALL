@@ -75,6 +75,17 @@ And then run, as super user, run:
 
 This will add the library to the cache and you won't need to alter the environment library LD_LIBRARY_PATH again.
 
+Instructions for building EHCI from SVN
+---------------------------------------
+
+Just type:
+
+  %  autoreconf --install 
+
+in the root of the trunk subfolder. It will generate the configure file.
+
+
+
 
 
 Installing OpenCV from CVS
