@@ -15,6 +15,12 @@ boxView3d_SOURCES = boxView3d.cpp
 boxView3d_LDADD = ../lib/libehci.la
 boxView3d_DATA = boxView3d.cpp
 
+simple2ddir = $(datadir)/@PACKAGE@/samples
+simple2d_PROGRAMS = simple2d 
+simple2d_SOURCES = simple2d.cpp 
+simple2d_LDADD = ../lib/libehci.la
+simple2d_DATA = simple2d.cpp
+
 simple3ddir = $(datadir)/@PACKAGE@/samples
 simple3d_PROGRAMS = simple3d 
 simple3d_SOURCES = simple3d.cpp 
