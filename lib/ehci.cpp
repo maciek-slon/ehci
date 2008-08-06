@@ -23,13 +23,13 @@ void loadCascade(CvHaarClassifierCascade** cascade){
 
 
 
-void detect_and_draw( IplImage* img,CvPoint* upperHeadCorner,int* headWidth,int* headHeight,CvHaarClassifierCascade* cascade, 
+int detect_and_draw( IplImage* img,CvPoint* upperHeadCorner,int* headWidth,int* headHeight,CvHaarClassifierCascade* cascade, 
 		CvMemStorage* storage)
 {
 	
 	double scale = 2.0;
 		IplImage *gray, *small_img;
-		int i, j;
+		int i, j,detected = 0;
 	
 	
 
@@ -60,19 +60,30 @@ void detect_and_draw( IplImage* img,CvPoint* upperHeadCorner,int* headWidth,int*
 			CvRect* r = (CvRect*)cvGetSeqElem( faces, i );
 			*upperHeadCorner= cvPoint(r->x*scale,r->y*scale);			
 			*headWidth=r->width*scale;
-			*headHeight=r->height*scale;					  	 
+			*headHeight=r->height*scale;
+			detected++;//used to return function value
 		}
 	}
 
-	//    cvShowImage( "result", img );
 	cvReleaseImage( &gray );
 	cvReleaseImage( &small_img );
+	
+	return detected;
 }
 
-void getHeadPosition(IplImage* frame, CvPoint* upperHeadCorner,int* headWidth,int* headHeight ){
+/*
+ * internal ehci function to get 2d head upper left corner, width and height
+ * the width and height are proportional to Viola-Jones trained cascade
+ * which are a little bit smaller than the real ones
+ * 
+ * returns 0 if no head was found 
+ */
+
+int getHeadPosition(IplImage* frame, CvPoint* upperHeadCorner,int* headWidth,int* headHeight ){
 	
 	static CvHaarClassifierCascade* cascade=0;
 	static CvMemStorage* storage;
+	int detected;
 			
 	if(!cascade){
 		loadCascade(&cascade);
@@ -85,18 +96,20 @@ void getHeadPosition(IplImage* frame, CvPoint* upperHeadCorner,int* headWidth,in
 	cvCopy( frame, frame_copy, 0 );
 		
 	
-	detect_and_draw(frame_copy,upperHeadCorner,headWidth,headHeight,cascade,storage);
+	detected = detect_and_draw(frame_copy,upperHeadCorner,headWidth,headHeight,cascade,storage);
 
 	cvRectangle(frame, *upperHeadCorner, cvPoint(upperHeadCorner->x + *headWidth,upperHeadCorner->y + *headHeight), cvScalar(0,0,255), 1);
 
 	cvReleaseImage( &frame_copy );
+	
+	return detected;
 
 }
 
 
 
-
-void updateGlPositMatrix(CvMatr32f rotation_matrix,CvVect32f translation_vector,double glPositMatrix[16]){
+double glPositMatrix[16];
+void updateGlPositMatrix(CvMatr32f rotation_matrix,CvVect32f translation_vector){
 
 	glPositMatrix[0] = rotation_matrix[0];
 	glPositMatrix[1] = rotation_matrix[3];
@@ -115,9 +128,19 @@ void updateGlPositMatrix(CvMatr32f rotation_matrix,CvVect32f translation_vector,
 	
 	glPositMatrix[12] =  translation_vector[0];
 	glPositMatrix[13] =  translation_vector[1]; 
-	glPositMatrix[14] =  translation_vector[2]; //negative
+	glPositMatrix[14] =  translation_vector[2];
 	glPositMatrix[15] = 1.0; //homogeneous
 
+}
+
+/*
+ *copies currently detected posit matrix (translation and rotation)
+ *in the openGl format to the parameter array  
+ */
+
+void getGlPositMatrix(double myGlPositMatrix[16]){
+	for(int i=0;i<16;i++)
+		myGlPositMatrix[i] = glPositMatrix[i];
 }
  
 void setInitialRTMatrix(CvMatr32f rotation_matrix,CvVect32f translation_vector){
@@ -356,9 +379,9 @@ int insertNewPoints(IplImage* grey, int headX,int headY,int width, int height,
 
 
 	double quality = 0.01;
-	double min_distance = 10;
+	double min_distance = 5;
 
-	int numPoints = 20;//MAX_COUNT;
+	int numPoints = 200;//MAX_COUNT;
 	cvGoodFeaturesToTrack( result, eig, temp, points, &numPoints,
 			quality, min_distance, 0, 3, 0, 0.04 );	    	
 	//TODO: ENABLE SUBPIX AFTER TESTS  
@@ -378,13 +401,12 @@ int insertNewPoints(IplImage* grey, int headX,int headY,int width, int height,
 }
 
 
-//TODO: correct projection matrix
-void setGLProjectionMatrix(double projectionMatrix[16], double focus){
+void setGLProjectionMatrix(double projectionMatrix[16]){
 	double farPlane=10000.0;
 	double nearPlane=1.0;
 	double width = 640;
 	double height = 480;
-	double focalLength = focus;
+	double focalLength = EHCIFOCUS;
 	projectionMatrix[0] = 2*focalLength/width;
 	projectionMatrix[1] = 0.0;
 	projectionMatrix[2] = 0.0;
@@ -427,69 +449,34 @@ int win_size = 10;
 
 IplImage* frame;
 
+//returns last captured frame
 IplImage* getCurrentFrame(){
 	return frame;
 }
 
-int cvLoop(double glPositMatrix[16],int initialGuess, int focus,float modelScale , CvCapture* capture,
-		int* refX,int * refY, int* myLastHeadW, int* myLastHeadH){
 
-	static int flags = 0;
-
-	
-	int i, k, c;
-	static int numberOfTrackingPoints=0;
-	int headWidth, headHeight;
-
-	frame = 0;
-	if(READFROMIMAGEFILE){
-		frame = cvLoadImage( "head.jpg", 1 );
+CvCapture* capture = 0;
+//TODO: in case different types of input are required, change this variable
+int initializeCapture(){
+	if(!capture){
+		capture = cvCaptureFromCAM(0);	
 	}
-	else{
-		frame = cvQueryFrame( capture );
-		if( !frame )
-			return 0;
-	}
-
-	if( !image )
+	if( !capture )
 	{
-		/* allocate all the buffers */
-		image = cvCreateImage( cvGetSize(frame), 8, 3 );
-		image->origin = frame->origin;
-		grey = cvCreateImage( cvGetSize(frame), 8, 1 );
-		prev_grey = cvCreateImage( cvGetSize(frame), 8, 1 );
-		pyramid = cvCreateImage( cvGetSize(frame), 8, 1 );
-		prev_pyramid = cvCreateImage( cvGetSize(frame), 8, 1 );
-		points[0] = (CvPoint2D32f*)cvAlloc(MAX_COUNT*sizeof(points[0][0]));
-		points[1] = (CvPoint2D32f*)cvAlloc(MAX_COUNT*sizeof(points[0][0]));
-		status = (char*)cvAlloc(MAX_COUNT);
-		flags = 0;
+		fprintf(stderr,"Could not initialize capturing...\n");
+		return 0;
 	}
+	return 1;
+}
 
-	cvCopy( frame, image, 0 );
-	cvCvtColor( image, grey, CV_BGR2GRAY );
+/*
+ * Updates 6 degrees of freedom head tracking
+ */
 
-
-	getHeadPosition(image, &upperHeadCorner,&headWidth,&headHeight );
+void update6dof(int headHeight, int headWidth,int initialGuess,int numberOfTrackingPoints){
+	static int flags = 0;	
+	int i,k;
 	
-
-	if(initialGuess){
-		//automatic initialization won't work in case face was not detected
-		if((headWidth <= 0) || (headHeight<=0)) return 0;				
-		if((upperHeadCorner.x>=0)&&(upperHeadCorner.y>=0)&&
-				(upperHeadCorner.x+headWidth< cvGetSize(grey).width) && (upperHeadCorner.y+headHeight< cvGetSize(grey).height))
-			numberOfTrackingPoints = insertNewPoints(grey,upperHeadCorner.x+(int)(0.25*headWidth),upperHeadCorner.y+(int)(0.25*headHeight),
-					(int)(headWidth*0.5),(int)(headHeight*0.5),points[0]);	
-		*refX = cvPointFrom32f(points[0][0]).x - upperHeadCorner.x;
-		*refY = cvPointFrom32f(points[0][0]).y - upperHeadCorner.y;
-		lastHeadW = headWidth;
-		lastHeadH = headHeight;
-		*myLastHeadW = lastHeadW;
-		*myLastHeadH = lastHeadH;
-	}
-	
-
-
 	if( numberOfTrackingPoints > 0 )
 	{
 		cvCalcOpticalFlowPyrLK( prev_grey, grey, prev_pyramid, pyramid,
@@ -522,20 +509,102 @@ int cvLoop(double glPositMatrix[16],int initialGuess, int focus,float modelScale
 	if(numberOfTrackingPoints >=NUMPTS){
 		//getPositMatrix uses points[1] obtained from cvCalcOpticalFlowPyrLK
 		getPositMatrix(image,initialGuess, rotation_matrix,translation_vector,
-				numberOfTrackingPoints,focus,points[1],upperHeadCorner,
-				headWidth,headHeight,modelScale);
-		updateGlPositMatrix(rotation_matrix,translation_vector,glPositMatrix);	
+				numberOfTrackingPoints,EHCIFOCUS,points[1],upperHeadCorner,
+				headWidth,headHeight,EHCIMODELSCALE);
+		updateGlPositMatrix(rotation_matrix,translation_vector);	
 
 	}
 
 	CV_SWAP( prev_grey, grey, swap_temp );
 	CV_SWAP( prev_pyramid, pyramid, swap_temp );
 	CV_SWAP( points[0], points[1], swap_points );
+	
+}
+
+/*
+ * updates internal parameters so that getHeadParameters works accordingly
+ */
+int myUpperHeadX,myUpperHeadY,myHeadWidth,myHeadHeight;
+void updateInternalHeadPosition(int upperHeadX, int upperHeadY,int headWidth,int headHeight){
+	myUpperHeadX = upperHeadX;
+	myUpperHeadY = upperHeadY;
+	myHeadWidth  = headWidth;
+	myHeadHeight = headHeight;
+}
+
+int cvLoop(int mode,int initialGuess, int* refX,int * refY, int* myLastHeadW, int* myLastHeadH){	
+	static int numberOfTrackingPoints=0;
+	int i, k, c;	
+	int headWidth, headHeight,detectedHead=0;
+	
+
+	frame = 0;
+	
+	if(!initializeCapture())
+		return 0;
+	
+	
+	if(READFROMIMAGEFILE){
+		frame = cvLoadImage( "head.jpg", 1 );
+	}
+	else{
+		frame = cvQueryFrame( capture );
+		if( !frame ){
+			
+			return 0;
+		}
+	}
+
+	if( !image )
+	{
+		/* allocate all the buffers */
+		image = cvCreateImage( cvGetSize(frame), 8, 3 );
+		image->origin = frame->origin;
+		grey = cvCreateImage( cvGetSize(frame), 8, 1 );
+		prev_grey = cvCreateImage( cvGetSize(frame), 8, 1 );
+		pyramid = cvCreateImage( cvGetSize(frame), 8, 1 );
+		prev_pyramid = cvCreateImage( cvGetSize(frame), 8, 1 );
+		points[0] = (CvPoint2D32f*)cvAlloc(MAX_COUNT*sizeof(points[0][0]));
+		points[1] = (CvPoint2D32f*)cvAlloc(MAX_COUNT*sizeof(points[0][0]));
+		status = (char*)cvAlloc(MAX_COUNT);
+	}
+
+	cvCopy( frame, image, 0 );
+	cvCvtColor( image, grey, CV_BGR2GRAY );
+
+	if(mode & EHCI2DFACEDETECT)
+		detectedHead = getHeadPosition(image, &upperHeadCorner,&headWidth,&headHeight );
+	
+	
+	updateInternalHeadPosition(upperHeadCorner.x,upperHeadCorner.y,
+			headWidth,headHeight);
+
+	if(initialGuess){
+		//automatic initialization won't work in case face was not detected
+		if((headWidth <= 0) || (headHeight<=0)) return 0;				
+		if((upperHeadCorner.x>=0)&&(upperHeadCorner.y>=0)&&
+				(upperHeadCorner.x+headWidth< cvGetSize(grey).width) && (upperHeadCorner.y+headHeight< cvGetSize(grey).height))
+			numberOfTrackingPoints = insertNewPoints(grey,upperHeadCorner.x+(int)(0.15*headWidth),upperHeadCorner.y+(int)(0.15*headHeight),
+					(int)(headWidth*0.7),(int)(headHeight*0.7),points[0]);	
+		*refX = cvPointFrom32f(points[0][0]).x - upperHeadCorner.x;
+		*refY = cvPointFrom32f(points[0][0]).y - upperHeadCorner.y;
+		lastHeadW = headWidth;
+		lastHeadH = headHeight;
+		*myLastHeadW = lastHeadW;
+		*myLastHeadH = lastHeadH;
+	}
+	
+
+
+	if((mode & EHCI6DFACEDETECT)&&(detectedHead)){
+		update6dof(headHeight, headWidth, initialGuess,numberOfTrackingPoints);
+	}
 
 
 	cvShowImage( "6dofHead", image );
 
-	c = cvWaitKey(10);
+	//main cvLoop, used to process events
+	cvWaitKey(10);
 
 	if(numberOfTrackingPoints<NUMPTS)
 		return 0;
@@ -543,6 +612,11 @@ int cvLoop(double glPositMatrix[16],int initialGuess, int focus,float modelScale
 		return 1;
 }
 
+
+//ehci cleanup code
+void ehciExit(){
+	cvReleaseCapture( &capture );
+}
 
 
 /* This function is supposed to find the
