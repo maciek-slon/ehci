@@ -532,7 +532,42 @@ void updateInternalHeadPosition(int upperHeadX, int upperHeadY,int headWidth,int
 	myHeadHeight = headHeight;
 }
 
-int cvLoop(int mode,int initialGuess, int* refX,int * refY, int* myLastHeadW, int* myLastHeadH){	
+int referenceUpperHeadX,referenceUpperHeadY,referenceHeadWidth,referenceHeadHeight;
+void updateReferenceInternalHeadPosition(int upperHeadX, int upperHeadY,int headWidth,int headHeight){
+	referenceUpperHeadX=upperHeadX;
+	referenceUpperHeadY=upperHeadY;
+	referenceHeadWidth = headWidth;
+	referenceHeadHeight = headHeight;
+}
+
+/*
+ * returns reference head position in pixel dimensions
+ * Upper left is x=0, y = 0
+ * Head width and height are also given in pixels
+ */
+void getReferenceHeadBounds(int* headRefX,int* headRefY,int* aLastHeadW,int* aLastHeadH){
+	*headRefX = referenceUpperHeadX;
+	*headRefY = referenceUpperHeadY;
+	*aLastHeadW = referenceHeadWidth;
+	*aLastHeadH = referenceHeadHeight;
+}
+
+
+/*
+ * returns last captured head position in pixel dimensions
+ * Upper left is x=0, y = 0
+ * Head width and height are also given in pixels
+ *  
+ */
+
+void getHeadBounds(int* headRefX,int* headRefY,int* aLastHeadW,int* aLastHeadH){
+	*headRefX = myUpperHeadX;
+	*headRefY = myUpperHeadY;
+	*aLastHeadW = myHeadWidth;
+	*aLastHeadH = myHeadHeight;
+}
+
+int ehciLoop(int mode,int initialGuess){	
 	static int numberOfTrackingPoints=0;
 	int i, k, c;	
 	int headWidth, headHeight,detectedHead=0;
@@ -582,16 +617,17 @@ int cvLoop(int mode,int initialGuess, int* refX,int * refY, int* myLastHeadW, in
 	if(initialGuess){
 		//automatic initialization won't work in case face was not detected
 		if((headWidth <= 0) || (headHeight<=0)) return 0;				
-		if((upperHeadCorner.x>=0)&&(upperHeadCorner.y>=0)&&
-				(upperHeadCorner.x+headWidth< cvGetSize(grey).width) && (upperHeadCorner.y+headHeight< cvGetSize(grey).height))
+		if(		(upperHeadCorner.x>=0)&&(upperHeadCorner.y>=0)&&
+				(upperHeadCorner.x+headWidth< cvGetSize(grey).width) && 
+				(upperHeadCorner.y+headHeight< cvGetSize(grey).height)){
 			numberOfTrackingPoints = insertNewPoints(grey,upperHeadCorner.x+(int)(0.15*headWidth),upperHeadCorner.y+(int)(0.15*headHeight),
 					(int)(headWidth*0.7),(int)(headHeight*0.7),points[0]);	
-		*refX = cvPointFrom32f(points[0][0]).x - upperHeadCorner.x;
-		*refY = cvPointFrom32f(points[0][0]).y - upperHeadCorner.y;
-		lastHeadW = headWidth;
-		lastHeadH = headHeight;
-		*myLastHeadW = lastHeadW;
-		*myLastHeadH = lastHeadH;
+		}
+		int refX = cvPointFrom32f(points[0][0]).x - upperHeadCorner.x;
+		int refY = cvPointFrom32f(points[0][0]).y - upperHeadCorner.y;
+		int myLastHeadW = headWidth;
+		int myLastHeadH = headHeight;
+		updateReferenceInternalHeadPosition(refX,refY,myLastHeadW,myLastHeadH);
 	}
 	
 

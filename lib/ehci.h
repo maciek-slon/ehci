@@ -30,7 +30,11 @@ int insertNewPoints(IplImage* grey, int headX,int headY,int width, int height,
 
 void setGLProjectionMatrix(double projectionMatrix[16]);
 
-int cvLoop(int mode, int initialGuess,int* refX,int * refY,int* myLastHeadW, int* myLastHeadH);
+int ehciLoop(int mode, int initialGuess);
+
+void getHeadBounds(int* headRefX,int* headRefY,int* aLastHeadW,int* aLastHeadH);
+
+void getReferenceHeadBounds(int* headRefX,int* headRefY,int* aLastHeadW,int* aLastHeadH);
 
 
 void getGlPositMatrix(double myGlPositMatrix[16]);
