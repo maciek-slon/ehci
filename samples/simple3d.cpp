@@ -30,6 +30,8 @@ int main(){
 		getGlPositMatrix(glPositMatrix);
 		
 		//the dimensions from 12 up to 14 store translation data
+		//depending on the calibration, measures will be roughly proportional
+		//to milimeters. Notice that the center of the camera has coordinates (0,0,0)
 		double headX = glPositMatrix[12];
 		double headY = glPositMatrix[13];
 		double headZ = glPositMatrix[14];
