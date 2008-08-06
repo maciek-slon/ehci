@@ -9,7 +9,6 @@ int main(){
 	
 	//this function creates a window to see debug information
 	//about capturing image and face detection
-	ehciInit();
 	while(1){
 		//this is the main ehciLoop
 		//every application should call this function in a realtime loop

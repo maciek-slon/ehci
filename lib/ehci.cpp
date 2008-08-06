@@ -4,11 +4,9 @@
 #include <vector>
 
 
-
-//static CvHaarClassifierCascade* cascade = 0;
-//static CvMemStorage* storage = 0;
-
-//loads cascade xml
+/**
+ * loads cascade xml
+ */
 void loadCascade(CvHaarClassifierCascade** cascade){	
 
 	*cascade = (CvHaarClassifierCascade*)cvLoad( "data/haarcascade_frontalface_default.xml", 0, 0, 0 );
@@ -71,13 +69,7 @@ int detect_and_draw( IplImage* img,CvPoint* upperHeadCorner,int* headWidth,int* 
 	return detected;
 }
 
-/*
- * internal ehci function to get 2d head upper left corner, width and height
- * the width and height are proportional to Viola-Jones trained cascade
- * which are a little bit smaller than the real ones
- * 
- * returns 0 if no head was found 
- */
+
 
 int getHeadPosition(IplImage* frame, CvPoint* upperHeadCorner,int* headWidth,int* headHeight ){
 	
@@ -93,7 +85,9 @@ int getHeadPosition(IplImage* frame, CvPoint* upperHeadCorner,int* headWidth,int
 	
 	IplImage *frame_copy = 0;
 	frame_copy = cvCreateImage( cvSize(frame->width,frame->height), IPL_DEPTH_8U, frame->nChannels );
+	
 	cvCopy( frame, frame_copy, 0 );
+	
 		
 	
 	detected = detect_and_draw(frame_copy,upperHeadCorner,headWidth,headHeight,cascade,storage);
@@ -599,6 +593,7 @@ int ehciLoop(int mode,int initialGuess){
 			return 0;
 		}
 	}
+	cvFlip( frame, frame, 1 );
 
 	if( !image )
 	{
@@ -650,7 +645,7 @@ int ehciLoop(int mode,int initialGuess){
 	cvShowImage( "EHCI Window", image );
 
 	//main cvLoop, used to process events
-	cvWaitKey(10);
+	cvWaitKey(5);
 
 	if(numberOfTrackingPoints<NUMPTS)
 		return 0;
