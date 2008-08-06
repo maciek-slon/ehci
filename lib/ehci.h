@@ -17,13 +17,7 @@ void updateGlPositMatrix(CvMatr32f rotation_matrix,CvVect32f translation_vector)
 void setInitialRTMatrix(CvMatr32f rotation_matrix,CvVect32f translation_vector);
 
 
-/**
- * internal ehci function to get 2d head upper left corner, width and height
- * the width and height are proportional to Viola-Jones trained cascade
- * which are a little bit smaller than the real ones
- * 
- * returns 0 if no head was found 
- */
+
 int getHeadPosition(IplImage* frame, CvPoint* upperHeadCorner,int* headWidth,int* headHeight );
 
 int detect_and_draw( IplImage* img,CvPoint* upperHeadCorner,int* headWidth,int* headHeight,CvHaarClassifierCascade* cascade, 

@@ -73,7 +73,13 @@ int detect_and_draw( IplImage* img,CvPoint* upperHeadCorner,int* headWidth,int* 
 }
 
 
-
+/**
+ * internal ehci function to get 2d head upper left corner, width and height
+ * the width and height are proportional to Viola-Jones trained cascade
+ * which are a little bit smaller than the real ones
+ * 
+ * returns 0 if no head was found 
+ */
 int getHeadPosition(IplImage* frame, CvPoint* upperHeadCorner,int* headWidth,int* headHeight ){
 	
 	static CvHaarClassifierCascade* cascade=0;
@@ -348,7 +354,7 @@ void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matri
 	
 }
 
-/*
+/**
  * This function inserts feature points according to cvFindGoodFeatures to Track
  * in the roi given by headX,headY, width, and height
  * Returns the number of points it was able to insert 
@@ -426,11 +432,6 @@ void setGLProjectionMatrix(double projectionMatrix[16]){
 
 }
 
-/*
- * This function detects where the head is and returns the openGL matrix associated 
- * in case it doesn't work (if the grabed image was too dark, or if it was one of 
- * the first frames, during initialization), it will return 0. It returns 1 otherwise
- */
 #define READFROMIMAGEFILE 0
 #define NUMPTS 8
 
@@ -446,7 +447,9 @@ int win_size = 10;
 
 IplImage* frame;
 
-//returns last captured frame
+/**
+ * Returns last captured frame.
+ */
 IplImage* getCurrentFrame(){
 	return frame;
 }
@@ -466,8 +469,8 @@ int initializeCapture(){
 	return 1;
 }
 
-/*
- * Updates 6 degrees of freedom head tracking
+/**
+ * Updates 6 degrees of freedom head tracking.
  */
 
 void update6dof(int headHeight, int headWidth,int initialGuess,int numberOfTrackingPoints){
@@ -518,8 +521,8 @@ void update6dof(int headHeight, int headWidth,int initialGuess,int numberOfTrack
 	
 }
 
-/*
- * updates internal parameters so that getHeadParameters works accordingly
+/**
+ * Updates internal parameters so that getHeadParameters works accordingly.
  */
 int myUpperHeadX,myUpperHeadY,myHeadWidth,myHeadHeight;
 void updateInternalHeadPosition(int upperHeadX, int upperHeadY,int headWidth,int headHeight){
@@ -537,10 +540,10 @@ void updateReferenceInternalHeadPosition(int upperHeadX, int upperHeadY,int head
 	referenceHeadHeight = headHeight;
 }
 
-/*
- * returns reference head position in pixel dimensions
- * Upper left is x=0, y = 0
- * Head width and height are also given in pixels
+/**
+ * Returns reference head position in pixel dimensions.
+ * Upper left is x=0, y = 0 . 
+ * Head width and height are also given in pixels.
  */
 void getReferenceHeadBounds(int* headRefX,int* headRefY,int* aLastHeadW,int* aLastHeadH){
 	*headRefX = referenceUpperHeadX;
@@ -550,10 +553,10 @@ void getReferenceHeadBounds(int* headRefX,int* headRefY,int* aLastHeadW,int* aLa
 }
 
 
-/*
- * returns last captured head position in pixel dimensions
- * Upper left is x=0, y = 0
- * Head width and height are also given in pixels
+/**
+ * Returns last captured head position in pixel dimensions.
+ * Upper left is x=0, y = 0 .
+ * Head width and height are also given in pixels.
  *  
  */
 
@@ -564,8 +567,8 @@ void getHeadBounds(int* headRefX,int* headRefY,int* aLastHeadW,int* aLastHeadH){
 	*aLastHeadH = myHeadHeight;
 }
 
-/*
- * Deals with library initialization and creating debug windows
+/**
+ * Deals with library initialization and creating debug windows.
  */
 
 void ehciInit(){
@@ -657,7 +660,9 @@ int ehciLoop(int mode,int initialGuess){
 }
 
 
-//ehci cleanup code
+/**
+ * ehci cleanup code
+ */
 void ehciExit(){
 	
 	cvDestroyWindow("EHCI Window");
