@@ -4,9 +4,6 @@ This code uses a classifier with special license. Please look into "haarcascade_
 Project homepage: http://code.google.com/p/ehci/
 */
 
-
-#include "cv.h"
-#include "highgui.h"
 #include "ehci.h"
 
 #include <stdio.h>
@@ -29,9 +26,6 @@ Project homepage: http://code.google.com/p/ehci/
 #define MEANWINDOW 5
 double headHist[MEANWINDOW];
 
-
-CvCapture* capture = 0;
-IplImage *frame, *frame_copy = 0;
 double headX,headY,headDist;
 
 int cvInit(int argc,char** argv);
@@ -95,88 +89,35 @@ struct Image {
 };
 typedef struct Image Image;
 
-void detect_and_draw( IplImage* image );
-
-const char* cascade_name =
-    "haarcascade_frontalface_alt.xml";
-/*    "haarcascade_profileface.xml";*/
-
-void detect_and_draw( IplImage* img )
+void detect_and_draw( )
 {
-    static CvScalar colors[] = 
-    {
-        {{0,0,255}},
-        {{0,128,255}},
-        {{0,255,255}},
-        {{0,255,0}},
-        {{255,128,0}},
-        {{255,255,0}},
-        {{255,0,0}},
-        {{255,0,255}}
-    };
 
-    double scale = 2.0;
-    IplImage* gray = cvCreateImage( cvSize(img->width,img->height), 8, 1 );
-    IplImage* small_img = cvCreateImage( cvSize( cvRound (img->width/scale),
-                         cvRound (img->height/scale)),
-                     8, 1 );
-    int i;
+	double t = (double)cvGetTickCount();
 
-    cvCvtColor( img, gray, CV_BGR2GRAY );
-    cvResize( gray, small_img, CV_INTER_LINEAR );
-    cvEqualizeHist( small_img, small_img );
-    cvClearMemStorage( storage );
+	int detectedHeadWidth,detectedHeadHeight;		
+	int upperHeadX,upperHeadY;
 
-    if( cascade )
-    {
-        double t = (double)cvGetTickCount();
-		int detectedHeadWidth,detectedHeadHeight;
-		CvPoint upperHeadCorner;
-
-		getHeadPosition(img, &upperHeadCorner,&detectedHeadWidth,&detectedHeadHeight );
-
-/*		CvRect* r = (CvRect*)cvGetSeqElem( faces, i );
-		CvPoint center;
-		CvPoint p1,p2;
-		p1.x = r->x*scale; p1.y = r->y*scale;
-		p2.x = (r->x + r->width)*scale; p2.y = (r->y + r->height)*scale;
-		cvRectangle(img,p1,p2,colors[i%8],1,8,0);
-		int radius;
-		center.x = cvRound((r->x + r->width*0.5)*scale);
-		center.y = cvRound((r->y + r->height*0.5)*scale);
-
-
-		double x1 = r->x*scale;
-		double x2 = (r->x+r->width)*scale;*/
+	ehciLoop(EHCI2DFACEDETECT,0);		
+	getHeadBounds(&upperHeadX,&upperHeadY,&detectedHeadWidth,&detectedHeadHeight );
+	CvPoint upperHeadCorner;
+	upperHeadCorner.x = upperHeadX;
+	upperHeadCorner.y = upperHeadY;
 	    
-		double angle = detectedHeadWidth * horizontalGradesPerPixel * 3.141592654/180;
-		headDist = (headWidth/2) / (tan(angle/2)); //in meters
+	double angle = detectedHeadWidth * horizontalGradesPerPixel * 3.141592654/180;
+	headDist = (headWidth/2) / (tan(angle/2)); //in meters
 
-/*	    for(int i=MEANWINDOW-1;i>0;i--)
+	    for(int i=MEANWINDOW-1;i>0;i--)
 		headHist[i]=headHist[i-1];
 	    headHist[0]=headDist;
 	    double headMean=0;
 	    for(int i=0;i<MEANWINDOW;i++) headMean+=headHist[i];
-	    headDist=headMean/MEANWINDOW;*/
+	    headDist=headMean/MEANWINDOW;
 
-	    double xAngle = ((img->width)/2.0 - (upperHeadCorner.x+detectedHeadWidth/2)) * horizontalGradesPerPixel * 3.141592654/180;
-	    headX =  tan(xAngle) * headDist;
-	    double yAngle = ((img->height)/2.0 -(upperHeadCorner.y+detectedHeadHeight/2)) * verticalGradesPerPixel * 3.141592654/180;
-	    headY = tan(yAngle) * headDist;
-	    //printf("HeadX = %.4lfm HeadY = %.4lfm HeadZ = %.4lfm pix %lf\n",headX,headY,headDist,(img->width)/2.0 - ((r->x+r->width*0.5)*scale));
-	    
-
-
-/*	    headX = center.x;
-	    headY = center.y;	    
-            radius = cvRound((r->width + r->height)*0.25*scale);
-            cvCircle( img, center, radius, colors[i%8], 3, 8, 0 );*/
-//        }
-    }
-
-    cvShowImage( "result", img );
-    cvReleaseImage( &gray );
-    cvReleaseImage( &small_img );
+	double xAngle = ((640)/2.0 - (upperHeadCorner.x+detectedHeadWidth/2)) * horizontalGradesPerPixel * 3.141592654/180;
+	headX =  tan(xAngle) * headDist;
+	double yAngle = ((480)/2.0 -(upperHeadCorner.y+detectedHeadHeight/2)) * verticalGradesPerPixel * 3.141592654/180;
+	headY = tan(yAngle) * headDist;
+	
 }
 
 
@@ -208,14 +149,13 @@ int ImageLoad(char *filename, Image *image) {
 	printf("Error reading width from %s.\n", filename);
 	return 0;
     }
-    printf("Width of %s: %lu\n", filename, image->sizeX);
+    
     
     // read the height 
     if ((i = fread(&image->sizeY, 4, 1, file)) != 1) {
 	printf("Error reading height from %s.\n", filename);
 	return 0;
     }
-    printf("Height of %s: %lu\n", filename, image->sizeY);
     
     // calculate the size (assuming 24 bits or 3 bytes per pixel).
     size = image->sizeX * image->sizeY * 3;
@@ -354,37 +294,14 @@ void ReSizeGLScene(GLsizei Width, GLsizei Height)
 /* The main drawing function. */
 void DrawGLScene(void)
 {
-  //cvrelated
-        double t = (double)cvGetTickCount();
-        
-  if( capture ){
+	double t = (double)cvGetTickCount();
 
-    if( !cvGrabFrame( capture ))
-      return;//break;
-    frame = cvRetrieveFrame( capture );
-    if( !frame )
-      return;//      break;
-    if( !frame_copy )
-      frame_copy = cvCreateImage( cvSize(frame->width,frame->height),
-				  IPL_DEPTH_8U, frame->nChannels );
-    if( frame->origin == IPL_ORIGIN_TL )
-      cvCopy( frame, frame_copy, 0 );
-    else
-      cvFlip( frame, frame_copy, 0 );
-    
-    detect_and_draw( frame_copy );
-    
-    if( cvWaitKey( 10 ) >= 0 )
-      return;//      break;
-  }
-  //end cvrelated
-  
+	detect_and_draw( );
 
-  
   
   double normX = 3*headX;//(float) (( headX - 320)/320.0);
   double normY = 3*headY;//(float) (( headY - 240)/320.0);
-printf("Head x = %lf Head y = %lf\n",normX,normY);
+//printf("Head x = %lf Head y = %lf\n",normX,normY);
 
 
 
@@ -601,7 +518,7 @@ printf("Head x = %lf Head y = %lf\n",normX,normY);
     glutSwapBuffers();
 
 	t = (double)cvGetTickCount() - t;
-        printf( "            frame time = %gms\n", t/((double)cvGetTickFrequency()*1000.) );
+        //printf( "            frame time = %gms\n", t/((double)cvGetTickFrequency()*1000.) );
 }
 
 
@@ -687,7 +604,9 @@ int main(int argc, char **argv)
 {  
     /* Initialize GLUT state - glut will take any command line arguments that pertain to it or 
        X Windows - look at its documentation at http://reality.sgi.com/mjk/spec3/spec3.html */  
-    glutInit(&argc, argv);  
+    glutInit(&argc, argv);
+    
+    ehciInit();
 
     /* Select type of Display mode:   
      Double buffer 
@@ -727,56 +646,10 @@ int main(int argc, char **argv)
     InitGL(640, 480);
     
     /* Start Event Processing Engine */  
-    cvInit(argc,argv);
-      
-    /* Start Event Processing Engine */  
     glutMainLoop();  
-
-    cvFinish();
 
     return 1;
 }
 
-int cvInit(int argc,char** argv){
-    capture = 0;
-    frame = 0;
-    frame_copy = 0;
-    int optlen = strlen("--cascade=");
-    const char* input_name;
 
-    if( argc > 1 && strncmp( argv[1], "--cascade=", optlen ) == 0 )
-    {
-        cascade_name = argv[1] + optlen;
-        input_name = argc > 2 ? argv[2] : 0;
-    }
-    else
-    {
-        cascade_name = "data/haarcascade_frontalface_default.xml";
-        input_name = argc > 1 ? argv[1] : 0;
-    }
 
-    cascade = (CvHaarClassifierCascade*)cvLoad( cascade_name, 0, 0, 0 );
-    
-    if( !cascade )
-    {
-        fprintf( stderr, "ERROR: Could not load classifier cascade\n" );
-        fprintf( stderr,
-        "Usage: facedetect --cascade=\"<cascade_path>\" [filename|camera_index]\n" );
-        return -1;
-    }
-    storage = cvCreateMemStorage(0);
-    
-    if( !input_name || (isdigit(input_name[0]) && input_name[1] == '\0') )
-        capture = cvCaptureFromCAM( !input_name ? 0 : input_name[0] - '0' );
-    else
-        capture = cvCaptureFromAVI( input_name ); 
-
-    cvNamedWindow( "result", 1 );
-
-}
-
-void cvFinish(){
-  cvReleaseImage( &frame_copy );
-  cvReleaseCapture( &capture );
-  cvDestroyWindow("result");
-}

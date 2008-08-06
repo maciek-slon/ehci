@@ -362,8 +362,9 @@ void DrawGLScene(void)
 	CvMatr32f rotation_matrix = new float[9];
 	CvVect32f translation_vector = new float[3];
 	double glPositMatrix[16];
-	int detected = cvLoop(EHCI6DFACEDETECT,initialGuess,
-			&headRefX,&headRefY,&aLastHeadW, &aLastHeadH);
+	int detected = ehciLoop(EHCI6DFACEDETECT,initialGuess);
+	
+	getReferenceHeadBounds(&headRefX,&headRefY,&aLastHeadW, &aLastHeadH);
 	
 	getGlPositMatrix(glPositMatrix);
 	
@@ -626,13 +627,13 @@ int main( int argc, char** argv )
 	char rawFile[]="head.raw";
 	loadRaw(rawFile);
 
-	cvNamedWindow( "6dofHead", 1 );
-
+//	cvNamedWindow( "6dofHead", 1 );
+	ehciInit();
 	atexit(ehciExit);
 	openGLCustomInit(argc,argv);
 
 	
-	cvDestroyWindow("6dofHead");
+	//cvDestroyWindow("6dofHead");
 
 	return 0;
 }
