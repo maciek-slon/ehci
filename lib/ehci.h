@@ -30,6 +30,7 @@ int insertNewPoints(IplImage* grey, int headX,int headY,int width, int height,
 
 void setGLProjectionMatrix(double projectionMatrix[16]);
 
+void ehciInit();
 int ehciLoop(int mode, int initialGuess);
 
 void getHeadBounds(int* headRefX,int* headRefY,int* aLastHeadW,int* aLastHeadH);

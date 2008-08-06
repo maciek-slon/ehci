@@ -567,10 +567,20 @@ void getHeadBounds(int* headRefX,int* headRefY,int* aLastHeadW,int* aLastHeadH){
 	*aLastHeadH = myHeadHeight;
 }
 
+/*
+ * Deals with library initialization and creating debug windows
+ */
+
+void ehciInit(){
+	cvNamedWindow( "EHCI Window", 1 );	
+}
+
 int ehciLoop(int mode,int initialGuess){	
 	static int numberOfTrackingPoints=0;
 	int i, k, c;	
 	int headWidth, headHeight,detectedHead=0;
+	
+	
 	
 
 	frame = 0;
@@ -637,7 +647,7 @@ int ehciLoop(int mode,int initialGuess){
 	}
 
 
-	cvShowImage( "6dofHead", image );
+	cvShowImage( "EHCI Window", image );
 
 	//main cvLoop, used to process events
 	cvWaitKey(10);
@@ -651,6 +661,8 @@ int ehciLoop(int mode,int initialGuess){
 
 //ehci cleanup code
 void ehciExit(){
+	
+	cvDestroyWindow("EHCI Window");
 	cvReleaseCapture( &capture );
 }
 
