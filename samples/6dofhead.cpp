@@ -11,9 +11,6 @@
 #include <GL/glu.h>	// Header File For The GLu32 Library
 #include <GL/freeglut.h>
 
-#define MYFOCUS 602
-#define MODELSCALE 100
-
 /* white ambient light at half intensity (rgba) */
 GLfloat LightAmbient[] = { 0.2f, 0.2f, 0.2f, 1.0f };
 
@@ -32,7 +29,6 @@ GLuint	frameTexture;
 /* The number of our GLUT window */
 int window;  
 
-CvCapture* capture = 0;
 double projectionMatrix[16];
 
 
@@ -234,7 +230,7 @@ void drawHeadModel(float scale,int headWidth,int headHeight, int myRefX,int myRe
 		
 		
 		glBegin(GL_TRIANGLES);
-		glColor4d (0.0, 0.0, 1.0,0.65);
+		glColor4d (1.0, 1.0, 1.0,0.65);
 		
 		for(int j=0;j<3;j++){
 			glVertex3f(	scale* (triangles[i].vert[j][0]+deltaX),
@@ -366,34 +362,21 @@ void DrawGLScene(void)
 	CvMatr32f rotation_matrix = new float[9];
 	CvVect32f translation_vector = new float[3];
 	double glPositMatrix[16];
-	int detected = cvLoop(glPositMatrix,initialGuess,MYFOCUS,MODELSCALE,capture,
+	int detected = cvLoop(EHCI6DFACEDETECT,initialGuess,
 			&headRefX,&headRefY,&aLastHeadW, &aLastHeadH);
 	
-	
-	
+	getGlPositMatrix(glPositMatrix);
 	
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glLoadIdentity();
-	
 		
-	
-	
-	
-
 	checkTransparency();
 	
-	
-		
-	
-	
 	drawGrabbedFrame();
-	
-	
-	
 
 	if(initialGuess){
 		setInitialRTMatrix(rotation_matrix,translation_vector);
-		updateGlPositMatrix(rotation_matrix,translation_vector,glPositMatrix);	
+		updateGlPositMatrix(rotation_matrix,translation_vector);	
 	}
 	
 	
@@ -432,8 +415,6 @@ void DrawGLScene(void)
 		//drawGrabbedFrame();
 		
 		//loads reference point pose into OpenGL modelview matrix
-		
-
 		glMatrixMode(GL_PROJECTION);
 		glLoadMatrixd( projectionMatrix );
 
@@ -451,19 +432,14 @@ void DrawGLScene(void)
 			drawReferenceAxis();
 		
 		if(drawSine)
-			drawSinusoidalHead(MODELSCALE,aLastHeadW,aLastHeadH,headRefX,headRefY);
+			drawSinusoidalHead(EHCIMODELSCALE,aLastHeadW,aLastHeadH,headRefX,headRefY);
 		
 		//scale should be the same as Sinusoidal, but the head 
 		//is 5 units wide, so it's 5 times lower
 		
-		drawHeadModel(1.6*MODELSCALE/5.0f,aLastHeadW,aLastHeadH,headRefX,headRefY);		
+		drawHeadModel(1.6*EHCIMODELSCALE/5.0f,aLastHeadW,aLastHeadH,headRefX,headRefY);		
 		
 
-		
-		
-		
-		
-		
 		//glTranslatef(200.0,0,0.0f);
 		//glutWireSphere(80.0, 200, 200);
 	}	
@@ -543,7 +519,7 @@ void keyPressed(unsigned char key, int x, int y)
 void InitGL(GLsizei Width, GLsizei Height)	// We call this right after our OpenGL window is created.
 {
 
-	setGLProjectionMatrix(projectionMatrix,MYFOCUS);
+	setGLProjectionMatrix(projectionMatrix);
 
 
 	glEnable(GL_TEXTURE_2D);                    // Enable texture mapping.
@@ -650,25 +626,12 @@ int main( int argc, char** argv )
 	char rawFile[]="head.raw";
 	loadRaw(rawFile);
 
-
-	if( argc == 1 || (argc == 2 && strlen(argv[1]) == 1 && isdigit(argv[1][0])))
-		capture = cvCaptureFromCAM( argc == 2 ? argv[1][0] - '0' : 0 );
-	else if( argc == 2 )
-		capture = cvCaptureFromAVI( argv[1] );
-
-	if( !capture )
-	{
-		fprintf(stderr,"Could not initialize capturing...\n");
-		return -1;
-	}
-
 	cvNamedWindow( "6dofHead", 1 );
 
+	atexit(ehciExit);
 	openGLCustomInit(argc,argv);
 
-
-
-	cvReleaseCapture( &capture );
+	
 	cvDestroyWindow("6dofHead");
 
 	return 0;
