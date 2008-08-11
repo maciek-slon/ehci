@@ -12,7 +12,7 @@ void setInitialRTMatrix(CvMatr32f rotation_matrix,CvVect32f translation_vector);
 /*uses ViolaJones to find head position
  *returns upperHeadCorner, headWidth, and headHeight
  */
-void getHeadPosition(IplImage* frame, CvPoint* upperHeadCorner,int* headWidth,int* headHeight );
+void getObjectPosition(IplImage* frame, CvPoint* upperHeadCorner,int* headWidth,int* headHeight );
 
 
 void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matrix, CvVect32f translation_vector,

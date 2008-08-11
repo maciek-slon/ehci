@@ -186,7 +186,7 @@ void setProjectionMatrix(){
 
 //uses ViolaJones to find head position
 //returns upperHeadCorner, headWidth, and headHeight
-void getHeadPosition(IplImage* frame, CvPoint* upperHeadCorner,int* headWidth,int* headHeight );
+void getObjectPosition(IplImage* frame, CvPoint* upperHeadCorner,int* headWidth,int* headHeight );
 
 static CvHaarClassifierCascade* cascade = 0;
 int cascadeLoaded=0;
@@ -248,7 +248,7 @@ void loadCascade(){
 	cascadeLoaded=1;
 
 }
-void getHeadPosition(IplImage* frame, CvPoint* upperHeadCorner,int* headWidth,int* headHeight ){
+void getObjectPosition(IplImage* frame, CvPoint* upperHeadCorner,int* headWidth,int* headHeight ){
 	if(!cascadeLoaded){
 		printf("Cascade not loaded!\n");
 		return;
@@ -1070,7 +1070,7 @@ void cvLoop(){
 
 
 
-	getHeadPosition(image, &upperHeadCorner,&headWidth,&headHeight );
+	getObjectPosition(image, &upperHeadCorner,&headWidth,&headHeight );
 
 	/*
 	if(gCount>=30 && gCount <=30+NUMPTS-1){

@@ -34,6 +34,7 @@ AX_CHECK_GL
 AX_CHECK_GLUT
 
 
-AC_CONFIG_FILES([Makefile ehci.pc lib/Makefile samples/Makefile samples/data/Makefile])
+AC_CONFIG_FILES([Makefile ehci.pc lib/Makefile samples/Makefile samples/data/Makefile doc/Makefile
+ doc/html/Makefile])
 AC_OUTPUT
 

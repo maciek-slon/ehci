@@ -7,9 +7,10 @@
 /**
  * Loads cascade xml
  */
-void loadCascade(CvHaarClassifierCascade** cascade){	
+void loadCascade(CvHaarClassifierCascade** cascade, char* fileName){	
 
-	*cascade = (CvHaarClassifierCascade*)cvLoad( "data/haarcascade_frontalface_default.xml", 0, 0, 0 );
+	*cascade = (CvHaarClassifierCascade*)cvLoad( fileName, 0, 0, 0 );
+	
 	
 	if( !(*cascade) ){
 		printf( "ERROR: Could not load classifier cascade. The required file 'haarcascade_frontalface_default.xml' should be in a 'data' subdirectory under the directory in which the application is being run.\n" );
@@ -24,51 +25,43 @@ void loadCascade(CvHaarClassifierCascade** cascade){
  * This function uses OpenCV implemented Viola-Jones algorithm with 
  * Haar-like features and trained cascades. Refer to OpenCV documentation.
  */
-int detect_and_draw( IplImage* img,CvPoint* upperHeadCorner,int* headWidth,int* headHeight,CvHaarClassifierCascade* cascade, 
+int detect_and_draw( IplImage* small_img, int mode,double scale, CvPoint* upperHeadCorner,int* headWidth,int* headHeight,CvHaarClassifierCascade* cascade, 
 		CvMemStorage* storage)
-{
-	
-	double scale = 2.0;
-		IplImage *gray, *small_img;
-		int i, j,detected = 0;
-	
-	
+{	
+	int i, j,detected = 0;
 
-	gray = cvCreateImage( cvSize(img->width,img->height), 8, 1 );
-	small_img = cvCreateImage( cvSize( cvRound (img->width/scale),
-			cvRound (img->height/scale)), 8, 1 );
 
-	cvCvtColor( img, gray, CV_BGR2GRAY );
-	cvResize( gray, small_img, CV_INTER_LINEAR );
-	cvEqualizeHist( small_img, small_img );
 	cvClearMemStorage( storage );
-	
-	if( cascade )
-	{		
-		double t = (double)cvGetTickCount();
-		CvSeq* faces = cvHaarDetectObjects( small_img, cascade, storage,
-				1.2, 2, 0
-				|CV_HAAR_FIND_BIGGEST_OBJECT
-				//|CV_HAAR_DO_ROUGH_SEARCH
-				//|CV_HAAR_DO_CANNY_PRUNING
-				//|CV_HAAR_SCALE_IMAGE
-				,
-				cvSize(40, 40) );
-		t = (double)cvGetTickCount() - t;
-		//        printf( "detection time = %gms\n", t/((double)cvGetTickFrequency()*1000.) );
-		for( i = 0; i < (faces ? faces->total : 0); i++ )
-		{
-			CvRect* r = (CvRect*)cvGetSeqElem( faces, i );
-			*upperHeadCorner= cvPoint(r->x*scale,r->y*scale);			
-			*headWidth=r->width*scale;
-			*headHeight=r->height*scale;
-			detected++;//used to return function value
-		}
-	}
 
-	cvReleaseImage( &gray );
-	cvReleaseImage( &small_img );
+	//if(mode & EHCI2DFACEDETECT){
 	
+		if( cascade )
+		{
+			
+			double t = (double)cvGetTickCount();
+			CvSeq* faces = cvHaarDetectObjects( small_img, cascade, storage,
+					1.2, 2, 0
+					|CV_HAAR_FIND_BIGGEST_OBJECT
+					//|CV_HAAR_DO_ROUGH_SEARCH
+					//|CV_HAAR_DO_CANNY_PRUNING
+					//|CV_HAAR_SCALE_IMAGE
+					,
+					cvSize(40, 40) );
+			t = (double)cvGetTickCount() - t;
+			//        printf( "detection time = %gms\n", t/((double)cvGetTickFrequency()*1000.) );
+			for( i = 0; i < (faces ? faces->total : 0); i++ )
+			{				
+				CvRect* r = (CvRect*)cvGetSeqElem( faces, i );
+				*upperHeadCorner= cvPoint(r->x*scale,r->y*scale);			
+				*headWidth=r->width*scale;
+				*headHeight=r->height*scale;
+				detected++;//used to return function value
+			}
+		}
+//	}
+
+
+
 	return detected;
 }
 
@@ -80,14 +73,17 @@ int detect_and_draw( IplImage* img,CvPoint* upperHeadCorner,int* headWidth,int* 
  * 
  * returns 0 if no head was found 
  */
-int getHeadPosition(IplImage* frame, CvPoint* upperHeadCorner,int* headWidth,int* headHeight ){
+CvHaarClassifierCascade* headCascade=0;
+CvHaarClassifierCascade* handCascade=0;
+int getObjectPosition(IplImage* frame,int mode, CvPoint* upperHeadCorner,int* headWidth,int* headHeight ){
 	
-	static CvHaarClassifierCascade* cascade=0;
 	static CvMemStorage* storage;
 	int detected;
+	double scale = 2.0;
 			
-	if(!cascade){
-		loadCascade(&cascade);
+	if(!headCascade){
+		loadCascade(&headCascade,"data/haarcascade_frontalface_default.xml");
+		loadCascade(&handCascade,"data/aGest.xml");
 		storage = cvCreateMemStorage(0);
 	}
 	
@@ -97,13 +93,34 @@ int getHeadPosition(IplImage* frame, CvPoint* upperHeadCorner,int* headWidth,int
 	
 	cvCopy( frame, frame_copy, 0 );
 	
+	
+	IplImage *gray, *small_img;
 		
 	
-	detected = detect_and_draw(frame_copy,upperHeadCorner,headWidth,headHeight,cascade,storage);
+	
 
-	cvRectangle(frame, *upperHeadCorner, cvPoint(upperHeadCorner->x + *headWidth,upperHeadCorner->y + *headHeight), cvScalar(0,0,255), 1);
+	gray = cvCreateImage( cvSize(frame_copy->width,frame_copy->height), 8, 1 );
+	small_img = cvCreateImage( cvSize( cvRound (frame_copy->width/scale),
+			cvRound (frame_copy->height/scale)), 8, 1 );
+
+	cvCvtColor( frame_copy, gray, CV_BGR2GRAY );
+	cvResize( gray, small_img, CV_INTER_LINEAR );
+	cvEqualizeHist( small_img, small_img );
+	
+	
+	
+	if(mode&EHCI2DFACEDETECT){
+		detected = detect_and_draw(small_img,mode,scale,upperHeadCorner,headWidth,headHeight,headCascade,storage);
+		cvRectangle(frame, *upperHeadCorner, cvPoint(upperHeadCorner->x + *headWidth,upperHeadCorner->y + *headHeight), cvScalar(0,0,255), 1);
+	}
+	if(mode&EHCI2DHANDDETECT){
+		detected = detect_and_draw(small_img,mode,scale,upperHeadCorner,headWidth,headHeight,handCascade,storage);
+		cvRectangle(frame, *upperHeadCorner, cvPoint(upperHeadCorner->x + *headWidth,upperHeadCorner->y + *headHeight), cvScalar(255,0,0), 1);
+	}
 
 	cvReleaseImage( &frame_copy );
+	cvReleaseImage( &gray );
+	cvReleaseImage( &small_img );
 	
 	return detected;
 
@@ -492,7 +509,7 @@ void update6dof(int headHeight, int headWidth,int initialGuess,int numberOfTrack
 			points[1][k++] = points[1][i];
 			//draws points on image for debugging
 			cvCircle( image, cvPointFrom32f(points[1][i]), 4, CV_RGB(0,0,0), 0, 8,0);
-			cvCircle( image, cvPointFrom32f(points[1][i]), 3, CV_RGB(200,0,0), 0, 8,0);
+			cvCircle( image, cvPointFrom32f(points[1][i]), 3, CV_RGB(200,0,0), 0, 8,0);			
 			
 		}
 		numberOfTrackingPoints = k;
@@ -579,7 +596,8 @@ int ehciLoop(int mode,int initialGuess){
 	static int numberOfTrackingPoints=0;
 	int i, k, c;	
 	int headWidth, headHeight,detectedHead=0;
-	
+	CvPoint upperHandCorner;
+	int handWidth,handHeight,detectedHand=0; 
 	
 	
 
@@ -618,15 +636,23 @@ int ehciLoop(int mode,int initialGuess){
 	cvCopy( frame, image, 0 );
 	cvCvtColor( image, grey, CV_BGR2GRAY );
 
-	if(mode & EHCI2DFACEDETECT)
-		detectedHead = getHeadPosition(image, &upperHeadCorner,&headWidth,&headHeight );
+	
+	detectedHead = getObjectPosition(image, EHCI2DFACEDETECT,&upperHeadCorner,&headWidth,&headHeight );
+	
+	//TODO: refactor initialGuess code below to work with upperHandCorner, handWidth, and handHeight
+	//detectedHand = getObjectPosition(image, EHCI2DHANDDETECT,&upperHandCorner,&handWidth,&handHeight );
 	
 	
 	updateInternalHeadPosition(upperHeadCorner.x,upperHeadCorner.y,
 			headWidth,headHeight);
+	
+	
+	//main cvLoop, used to process events
+	cvWaitKey(5);
 
 	if(initialGuess){
 		//automatic initialization won't work in case face was not detected
+		//TODO: correct this return so that cvShowImage( "EHCI Window", image ) always happens
 		if((headWidth <= 0) || (headHeight<=0)) return 0;				
 		if(		(upperHeadCorner.x>=0)&&(upperHeadCorner.y>=0)&&
 				(upperHeadCorner.x+headWidth< cvGetSize(grey).width) && 
@@ -641,17 +667,12 @@ int ehciLoop(int mode,int initialGuess){
 		updateReferenceInternalHeadPosition(refX,refY,myLastHeadW,myLastHeadH);
 	}
 	
-
+	cvShowImage( "EHCI Window", image );
 
 	if((mode & EHCI6DFACEDETECT)){
 		update6dof(headHeight, headWidth, initialGuess,numberOfTrackingPoints);
 	}
-
-
-	cvShowImage( "EHCI Window", image );
-
-	//main cvLoop, used to process events
-	cvWaitKey(5);
+	
 
 	if(numberOfTrackingPoints<NUMPTS)
 		return 0;

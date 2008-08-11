@@ -135,7 +135,7 @@ void detect_and_draw( IplImage* img )
 		int detectedHeadWidth,detectedHeadHeight;
 		CvPoint upperHeadCorner;
 
-		getHeadPosition(img, &upperHeadCorner,&detectedHeadWidth,&detectedHeadHeight );
+		getObjectPosition(img, &upperHeadCorner,&detectedHeadWidth,&detectedHeadHeight );
 
 /*		CvRect* r = (CvRect*)cvGetSeqElem( faces, i );
 		CvPoint center;

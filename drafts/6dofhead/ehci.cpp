@@ -67,7 +67,7 @@ void detect_and_draw( IplImage* img,CvPoint* upperHeadCorner,int* headWidth,int*
 	cvReleaseImage( &small_img );
 }
 
-void getHeadPosition(IplImage* frame, CvPoint* upperHeadCorner,int* headWidth,int* headHeight ){
+void getObjectPosition(IplImage* frame, CvPoint* upperHeadCorner,int* headWidth,int* headHeight ){
 	
 	static CvHaarClassifierCascade* cascade=0;
 	static CvMemStorage* storage;
@@ -463,7 +463,7 @@ int cvLoop(double glPositMatrix[16],int initialGuess, int focus,float modelScale
 	cvCvtColor( image, grey, CV_BGR2GRAY );
 
 
-	getHeadPosition(image, &upperHeadCorner,&headWidth,&headHeight );
+	getObjectPosition(image, &upperHeadCorner,&headWidth,&headHeight );
 	
 
 	if(initialGuess){

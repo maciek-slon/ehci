@@ -1,5 +1,5 @@
 ACLOCAL_AMFLAGS = -I .m4
-SUBDIRS = lib samples
+SUBDIRS = lib samples doc
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = ehci.pc
