@@ -370,7 +370,7 @@ void DrawGLScene(void)
 	CvMatr32f rotation_matrix = new float[9];
 	CvVect32f translation_vector = new float[3];
 	double glPositMatrix[16];
-	int detected = ehciLoop(EHCI6DFACEDETECT,initialGuess);
+	int detected = ehciLoop(EHCI6DHANDDETECT,initialGuess);
 	
 	getReferenceHeadBounds(&headRefX,&headRefY,&aLastHeadW, &aLastHeadH);
 	
@@ -494,6 +494,7 @@ void keyPressed(unsigned char key, int x, int y)
 		break; // redundant.
 
 	case 'a':
+	case 'A':
 		drawAxis = !drawAxis;
 		break;
 	case 's':
@@ -502,7 +503,7 @@ void keyPressed(unsigned char key, int x, int y)
 	case 'd':
 	case 'D':
 		drawBackground = !drawBackground;
-		break;
+			break;
 	case 'b':
 	case 'B':
 		blending = !blending;
@@ -605,7 +606,7 @@ void openGLCustomInit(int argc, char** argv ){
 	glutInitWindowPosition(500, 0);  
 
 	/* Open a window */  
-	window = glutCreateWindow("6DOF Head Tracking OpenGL - EHCI - Daniel Lelis Baggio");
+	window = glutCreateWindow("6DOF Hand Tracking OpenGL - EHCI - Daniel Lelis Baggio");
 
 	/* Register the function to do all our OpenGL drawing. */
 	glutDisplayFunc(&DrawGLScene);  

@@ -2,6 +2,13 @@ SUBDIRS = data
 AM_CPPFLAGS = -I../lib/ $(OPENCV_CFLAGS) $(GL_CFLAGS) $(GLUT_CFLAGS) 
 AM_LDFLAGS = $(GL_LIBS) $(GLUT_LIBS) $(OPENCV_LIBS)
 
+6dofhanddir = $(datadir)/@PACKAGE@/samples
+6dofhand_PROGRAMS = 6dofhand 
+6dofhand_SOURCES = 6dofhand.cpp 
+6dofhand_LDADD = ../lib/libehci.la
+6dofhand_DATA = 6dofhand.cpp
+
+
 6dofheaddir = $(datadir)/@PACKAGE@/samples
 6dofhead_PROGRAMS = 6dofhead 
 6dofhead_SOURCES = 6dofhead.cpp 

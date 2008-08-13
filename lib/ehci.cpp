@@ -13,7 +13,8 @@ void loadCascade(CvHaarClassifierCascade** cascade, char* fileName){
 	
 	
 	if( !(*cascade) ){
-		printf( "ERROR: Could not load classifier cascade. The required file 'haarcascade_frontalface_default.xml' should be in a 'data' subdirectory under the directory in which the application is being run.\n" );
+		printf( "ERROR: Could not load classifier cascade. The required file '%s' should be in a 'data' subdirectory under the directory in which the application is being run.\n"
+				, fileName);
 		exit(1);
 	}	
 
@@ -637,7 +638,7 @@ int ehciLoop(int mode,int initialGuess){
 	cvCvtColor( image, grey, CV_BGR2GRAY );
 
 	
-	detectedHead = getObjectPosition(image, EHCI2DFACEDETECT,&upperHeadCorner,&headWidth,&headHeight );
+	detectedHead = getObjectPosition(image, mode,&upperHeadCorner,&headWidth,&headHeight );
 	
 	//TODO: refactor initialGuess code below to work with upperHandCorner, handWidth, and handHeight
 	//detectedHand = getObjectPosition(image, EHCI2DHANDDETECT,&upperHandCorner,&handWidth,&handHeight );
@@ -667,12 +668,13 @@ int ehciLoop(int mode,int initialGuess){
 		updateReferenceInternalHeadPosition(refX,refY,myLastHeadW,myLastHeadH);
 	}
 	
-	cvShowImage( "EHCI Window", image );
+	
 
-	if((mode & EHCI6DFACEDETECT)){
+	if((mode & EHCI6DFACEDETECT) || (mode & EHCI6DHANDDETECT)){
 		update6dof(headHeight, headWidth, initialGuess,numberOfTrackingPoints);
 	}
 	
+	cvShowImage( "EHCI Window", image );
 
 	if(numberOfTrackingPoints<NUMPTS)
 		return 0;

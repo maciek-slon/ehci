@@ -12,7 +12,8 @@
 ///EHCI2DFACEDETECT - only makes 2d facedetect
 ///EHCI6DFACEDETECT - makes 2d and 6dof facedetection, so it is 0x00000001 | 0x00000010
 ///EHCI2DHANDDETECT - 2d hand detect
-int EHCI2DFACEDETECT = 1, EHCI6DFACEDETECT =3 , EHCI2DHANDDETECT=4;
+///EHCI6DFACEDETECT - makes 2d and 6dof handdetections, so it is 0x00000100 | 0x00001000
+int EHCI2DFACEDETECT = 1, EHCI6DFACEDETECT =3 , EHCI2DHANDDETECT=4, EHCI6DHANDDETECT=12;
 
 void updateGlPositMatrix(CvMatr32f rotation_matrix,CvVect32f translation_vector);
 void setInitialRTMatrix(CvMatr32f rotation_matrix,CvVect32f translation_vector);
