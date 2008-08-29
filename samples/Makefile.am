@@ -34,5 +34,12 @@ simple3d_SOURCES = simple3d.cpp
 simple3d_LDADD = ../lib/libehci.la
 simple3d_DATA = simple3d.cpp
 
+zoomHanddir = $(datadir)/@PACKAGE@/samples
+zoomHand_PROGRAMS = zoomHand 
+zoomHand_SOURCES = zoomHand.cpp 
+zoomHand_LDADD = ../lib/libehci.la
+zoomHand_DATA = zoomHand.cpp
+
+
 
 
