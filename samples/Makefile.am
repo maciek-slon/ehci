@@ -1,6 +1,6 @@
 SUBDIRS = data
 AM_CPPFLAGS = -I../lib/ $(OPENCV_CFLAGS) $(GL_CFLAGS) $(GLUT_CFLAGS) 
-AM_LDFLAGS = $(GL_LIBS) $(GLUT_LIBS) $(OPENCV_LIBS)
+AM_LDFLAGS = $(GL_LIBS) $(GLUT_LIBS) $(OPENCV_LIBS) -lglut
 
 6dofhanddir = $(datadir)/@PACKAGE@/samples
 6dofhand_PROGRAMS = 6dofhand 
