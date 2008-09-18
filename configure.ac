@@ -1,4 +1,4 @@
-AC_INIT([ehci], [0.4], [http://code.google.com/p/ehci/issues/list],[ehci])
+AC_INIT([ehci], [0.5], [http://code.google.com/p/ehci/issues/list],[ehci])
 
 AC_CONFIG_SRCDIR([lib/ehci.cpp])
 
@@ -16,6 +16,30 @@ AC_LIBTOOL_WIN32_DLL
 AM_PROG_LIBTOOL
 
 AM_PROG_AS
+
+
+###################################
+# SWIG and Python related         #
+###################################
+
+AM_PATH_PYTHON(2.3)
+AC_PROG_SWIG(1.3.21)
+SWIG_ENABLE_CXX
+SWIG_PYTHON
+AC_PYTHON_DEVEL(>= '2.3')
+
+# optionaly pyehci compiling
+
+AC_ARG_ENABLE(pyehci,
+[  --enable-pyehci    Turn on python bindings for EHCI],
+[case "${enableval}" in
+  yes) pyehci=true ;;
+  no)  pyehci=false ;;
+  *) AC_MSG_ERROR(bad value ${enableval} for --enable-pyehci) ;;
+esac],[pyehci=false])
+AM_CONDITIONAL(PYEHCI, test x$pyehci = xtrue)
+
+
 
 ###################################
 # Checking for required libraries #
@@ -35,6 +59,6 @@ AX_CHECK_GLUT
 
 
 AC_CONFIG_FILES([Makefile ehci.pc lib/Makefile samples/Makefile samples/data/Makefile doc/Makefile
- doc/html/Makefile])
+ doc/html/Makefile pyehci/Makefile])
 AC_OUTPUT
 
