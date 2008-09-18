@@ -4,6 +4,8 @@
 #include <vector>
 
 
+
+
 /**
  * Loads cascade xml
  */
@@ -162,6 +164,7 @@ void updateGlPositMatrix(CvMatr32f rotation_matrix,CvVect32f translation_vector)
 void getGlPositMatrix(double myGlPositMatrix[16]){
 	for(int i=0;i<16;i++)
 		myGlPositMatrix[i] = glPositMatrix[i];
+	
 }
  
 void setInitialRTMatrix(CvMatr32f rotation_matrix,CvVect32f translation_vector){
@@ -590,7 +593,7 @@ void getHeadBounds(int* headRefX,int* headRefY,int* aLastHeadW,int* aLastHeadH){
  */
 
 void ehciInit(){
-	cvNamedWindow( "EHCI Window", 1 );	
+	cvNamedWindow( "EHCI Window", 0 );	
 }
 
 int ehciLoop(int mode,int initialGuess){	
