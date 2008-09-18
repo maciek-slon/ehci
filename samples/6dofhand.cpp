@@ -370,7 +370,9 @@ void DrawGLScene(void)
 	CvMatr32f rotation_matrix = new float[9];
 	CvVect32f translation_vector = new float[3];
 	double glPositMatrix[16];
-	int detected = ehciLoop(EHCI6DHANDDETECT,initialGuess);
+	//TODO: correct the constants 
+	//int detected = ehciLoop(EHCI6DHANDDETECT,initialGuess);
+	int detected = ehciLoop(12,initialGuess);
 	
 	getReferenceHeadBounds(&headRefX,&headRefY,&aLastHeadW, &aLastHeadH);
 	
@@ -642,6 +644,7 @@ int main( int argc, char** argv )
 {
 	char rawFile[]="head.raw";
 	loadRaw(rawFile);
+	
 
 //	cvNamedWindow( "6dofHead", 1 );
 	ehciInit();

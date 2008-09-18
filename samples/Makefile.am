@@ -1,6 +1,15 @@
 SUBDIRS = data
 AM_CPPFLAGS = -I../lib/ $(OPENCV_CFLAGS) $(GL_CFLAGS) $(GLUT_CFLAGS) 
 AM_LDFLAGS = $(GL_LIBS) $(GLUT_LIBS) $(OPENCV_LIBS) -lglut
+EXTRA_DIST = 6dof.py
+
+pythonsamplesdir = $(datadir)/@PACKAGE@/samples
+#pythonsamples_PROGRAMS = pythonsamples 
+#pythonsamples_SOURCES = pythonsamples.cpp 
+#pythonsamples_LDADD = ../lib/libehci.la
+pythonsamples_DATA = 6dof.py
+
+
 
 6dofhanddir = $(datadir)/@PACKAGE@/samples
 6dofhand_PROGRAMS = 6dofhand 
