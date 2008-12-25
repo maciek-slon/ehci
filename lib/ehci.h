@@ -4,9 +4,18 @@
 
 #include "cv.h"
 #include "highgui.h"
+#include <stdio.h>
+#include <vector>
+#include <list>
+
+#define USE_RANSAC 1
+#define RANSAC_SAMPLES 8
+#define RANSAC_DISTANCE_THRESHOLD 30.0
 
 #define EHCIMODELSCALE 50
 #define EHCIFOCUS  602
+
+using namespace std;
 
 ///ehci loop modes
 ///EHCI2DFACEDETECT - only makes 2d facedetect
