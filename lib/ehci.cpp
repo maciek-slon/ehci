@@ -1,7 +1,7 @@
 #include "ehci.h"
-#include <stdio.h>
 
-#include <vector>
+
+
 
 
 
@@ -285,6 +285,312 @@ void printMatrixData(CvMatr32f rotation_matrix, CvVect32f translation_vector){
 }
 
 
+//returns the inliers indexes in the inliers vector
+//returns the sum of the distances
+double plot2dModel(CvMatr32f rotation_matrix,CvVect32f translation_vector,
+		vector<CvPoint3D32f> objectPoints,IplImage *image,vector<CvPoint2D32f> imagePoints,vector<int>* inliers){
+
+	float a[] = {  rotation_matrix[0],  rotation_matrix[1],  rotation_matrix[2], translation_vector[0],
+			rotation_matrix[3],  rotation_matrix[4],  rotation_matrix[5], translation_vector[1],
+			rotation_matrix[6],  rotation_matrix[7],  rotation_matrix[8], translation_vector[2],
+			0,  0,  0,  1 };
+	
+	float projectionMatrix[16];
+	double farPlane=10000.0;
+	double nearPlane=1.0;
+	double width = 640;
+	double height = 480;
+	double focalLength = EHCIFOCUS;
+	
+	//TODO: trocar para os originais comentados
+	projectionMatrix[0] = 2*focalLength/width;
+	projectionMatrix[1] = 0.0;
+	projectionMatrix[2] = 0.0;
+	projectionMatrix[3] = 0.0;
+
+	projectionMatrix[4] = 0.0;
+	projectionMatrix[5] = 2*focalLength/ height;
+	projectionMatrix[6] = 0.0;
+	projectionMatrix[7] = 0.0;
+
+	projectionMatrix[8] = 0;
+	projectionMatrix[9] = 0;	
+	projectionMatrix[10] = - ( farPlane+nearPlane ) / ( farPlane - nearPlane );
+	projectionMatrix[11] =-2.0 * farPlane * nearPlane / ( farPlane - nearPlane );
+
+
+	projectionMatrix[12] = 0.0;
+	projectionMatrix[13] = 0.0;
+	projectionMatrix[14]= -1.0;		
+	projectionMatrix[15] = 0.0;
+
+
+	
+	
+
+
+	float pos[] = {0,0,0};
+
+	CvMat Ma = cvMat(4, 4, CV_32FC1, a);
+	
+	CvMat Mp = cvMat(4, 4, CV_32FC1, projectionMatrix);
+
+	int NUMPTS = objectPoints.size();
+	int w;
+	CvMat Mpoints[500];
+	float pontos[500][4];
+	
+	
+	pontos[0][0] =  0;
+	pontos[0][1] =  0;
+	pontos[0][2] =  0;
+	pontos[0][3] =  1.0;
+	
+	pontos[1][0] =  50.0;
+	pontos[1][1] =  0;
+	pontos[1][2] =  0;
+	pontos[1][3] =  1.0;
+	
+	pontos[2][0] =  0.0;
+	pontos[2][1] =  50.0;
+	pontos[2][2] =  0;
+	pontos[2][3] =  1.0;
+	
+
+	
+	for(w=0;w<NUMPTS;w++){
+		//fazendo tambem a mudanca de coordenada para o ponto 0
+		pontos[w][0] =  objectPoints[w].x - objectPoints[0].x;
+		pontos[w][1] =  objectPoints[w].y - objectPoints[0].y;
+		pontos[w][2] =  objectPoints[w].z - objectPoints[0].z;
+		pontos[w][3] =  1.0;
+		
+		Mpoints[w] = cvMat( 4, 1, CV_32FC1,&pontos[w]);//&objectPoints[w]);
+		
+		
+		/*cvmSet(&Mpoints[w],0,0,objectPoints[w].x);
+		cvmSet(&Mpoints[w],1,0,objectPoints[w].y);
+		cvmSet(&Mpoints[w],2,0,objectPoints[w].z);
+		cvmSet(&Mpoints[w],3,0,2.0);*/
+	}
+	
+	CvPoint3D32f origem;
+	origem.x = 0;
+	origem.y = 0;
+	origem.z = 0;	
+	
+	Mpoints[w]= cvMat( 4, 1, CV_32FC1,&origem);
+	cvmSet(&Mpoints[w],3,0,1.0);
+
+	CvMat* Mr1 =  cvCreateMat(4,1,CV_32FC1);
+	
+	float up[] = {0.0 ,-1.0 , 0.0 };
+	float s[] =  {-1.0 , 0.0,  0.0};
+	float f[] =  { 0.0 , 0.0 , 1.0 };
+	float u[] =  { 0.0 , 1.0 , 0.0 };
+
+	float look[] = {s[0], s[1], s[2], 0,
+			u[0], u[1], u[2], 0,
+			-f[0],-f[1],-f[2],0,
+			0   ,  0   , 0   ,1};
+	CvMat Mlook = cvMat(4, 4, CV_32FC1, look);
+	
+	//TODO: calcular distancia
+	double distance = 0;
+
+
+	for(w=0;w<NUMPTS;w++){
+	//for(w=0;w<=2;w++){
+
+		cvMatMul(&Ma,&Mpoints[w],Mr1);				
+		cvMatMul(&Mp,Mr1,Mr1);
+		
+		
+		//fazer o look at para o posit
+		cvMatMul(&Mlook,Mr1,Mr1);
+		
+		if(w==NUMPTS){
+			printf("CvModelView Matrix:\n");
+			for(int i=0;i<4;i++){
+				for(int j=0;j<4;j++){
+					printf("%lf ",cvmGet(&Ma,i,j));//
+				}
+				printf("\n");
+			}
+			printf("\n");
+			
+			CvMat* Mpro =  cvCreateMat(4,4,CV_32FC1);
+			cvMatMul(&Mlook,&Mp,Mpro);
+			
+			printf("CvProjection Matrix:\n");
+			for(int i=0;i<4;i++){
+				for(int j=0;j<4;j++){
+					printf("%lf ",cvmGet(Mpro,i,j));//
+				}
+				printf("\n");
+			}
+			printf("\n");
+			
+		}
+		
+		
+		double xWinPosition =cvmGet(Mr1,0,0)/cvmGet(Mr1,3,0)*320; 
+		double yWinPosition =cvmGet(Mr1,1,0)/cvmGet(Mr1,3,0)*240;
+		double dx = xWinPosition - imagePoints[w].x ;
+		double dy = yWinPosition - (-imagePoints[w].y );//estao com sinais trocados
+		
+		double pointDistance = sqrt(dx*dx+dy*dy);
+		//if(pointDistance>distance) distance = pointDistance;
+		distance += pointDistance;
+		if(pointDistance>RANSAC_DISTANCE_THRESHOLD){
+			//printf("Outlier %d %lf\n",w,pointDistance);
+		}
+		else{
+			inliers->push_back(w);
+		}
+		//printf("%3.2lf %3.2lf ipx %3.2lf ipy %3.2lf dx %3.2lf dy %3.2lf pdist %3.2lf dist %3.2lf\n",xWinPosition,yWinPosition,imagePoints[w].x,imagePoints[w].y,dx,dy,pointDistance,distance);
+		
+		//		printf("coord %f %f ",cvmGet(&Mpoints[w],0,0),cvmGet(&Mpoints[w],1,0));
+		//		printf("coord %f %f\n",cvmGet(Mr1,0,0),cvmGet(Mr1,1,0));
+		
+		//Debug information
+		//cvRectangle(image,cvPoint(0,0),cvPoint(160,120),CV_RGB(0,150,0),2,0,0);
+		//cvCircle( image,cvPoint(xWinPosition+320,-yWinPosition+240), w==NUMPTS?8:3, CV_RGB(0,0,200) , -1, 8,0);
+		
+		
+		//printf("%3.3lf %3.3lf %3.3lf %3.3lf (%3.3lf,%3.3lf,%3.3lf,%3.3lf)\n",cvmGet(Mr1,0,0),cvmGet(Mr1,1,0),
+//				cvmGet(Mr1,2,0),cvmGet(Mr1,3,0),cvmGet(&Mpoints[w],0,0),cvmGet(&Mpoints[w],1,0),cvmGet(&Mpoints[w],2,0),cvmGet(&Mpoints[w],3,0));
+		//cvCircle( image, cvPoint(160+1000*cvmGet(Mr1,0,0)/cvmGet(Mr1,2,0),120+1000*cvmGet(Mr1,1,0)/cvmGet(Mr1,2,0)), w==0?8:3, CV_RGB(0,0,200) , -1, 8,0);
+
+	}
+	printf("\n");
+	printf("Sum of distances %lf\n",distance);
+	
+	cvReleaseMat(&Mr1);
+
+	return distance;
+
+}
+
+
+vector<int> getRandomSet(int sampleSize, int setSize){
+	if(sampleSize<setSize){
+		printf("Set size too small in RANSAC\n");
+		exit(0);
+	}
+	vector<int> lista;
+	for(int i=0;i<sampleSize;i++){
+		lista.push_back(i);
+	}
+	vector<int> randomSet;
+	while(randomSet.size()<setSize){
+		int pos = rand()%lista.size();
+		randomSet.push_back(lista[pos]);
+		lista.erase(lista.begin()+pos);		
+	}
+	printf("Random set: ");
+	for(int i=0;i<randomSet.size();i++){
+		printf("%d ",randomSet[i]);
+	}
+	printf("\n");
+	return randomSet;
+	
+}
+
+/**
+ * This function is implemented as in 'Multiple View Geometry in Computer Vision'
+ * 1 - Randomly select samples from the 2d tracked set
+ * 2 - Use POSIT from this set
+ * 3 - Use distance to filter outliers
+ * 4 - Keep doing until some threshold of inliers size is found
+ * 
+ */
+
+void ransac( vector<CvPoint2D32f> imagePoints, vector<CvPoint3D32f> objectPoints,
+				CvMatr32f rotation_matrix, CvVect32f translation_vector, int focus,IplImage* myImage){
+	
+	vector<int> bestSet;
+	double minDist=10000000;
+	for(int k=0;k<20;k++){
+		//only choose first 4 points:
+		vector<CvPoint3D32f> chosenPoints;
+		vector<CvPoint2D32f> chosenImagePoints;
+		vector<int> randomPoints = getRandomSet(imagePoints.size(),RANSAC_SAMPLES);
+		
+		//do not change the first one, because it's the reference 
+		chosenPoints.push_back(objectPoints[0]);
+		chosenImagePoints.push_back(imagePoints[0]);
+		
+		for(int i=1;i<RANSAC_SAMPLES;i++){
+			int index = randomPoints[i];
+			if(index<objectPoints.size()){
+				chosenPoints.push_back(objectPoints[index]);
+				chosenImagePoints.push_back(imagePoints[index]);
+				//printf("%f %f\n",imagePoints[index].x,imagePoints[index].y);
+			}
+			
+		}
+		
+		
+		CvPOSITObject *positObject = cvCreatePOSITObject( &chosenPoints[0], static_cast<int>(chosenPoints.size()) );
+		//set posit termination criteria: 1000 max iterations, convergence epsilon 1.0e-5
+		
+		CvTermCriteria criteria = cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 1000, 1.0e-5 );			
+		cvPOSIT( positObject, &chosenImagePoints[0], focus, criteria, rotation_matrix, translation_vector );
+			
+		cvReleasePOSITObject (&positObject);
+		
+		vector<int> inliers;
+		double distance = plot2dModel(rotation_matrix,translation_vector,objectPoints,myImage,imagePoints,&inliers);
+		//printf("Found %d inliers\n",inliers.size());
+		//if(inliers.size()>bestSize){
+		if(distance<minDist){
+			//bestSize = inliers.size();
+			minDist = distance;
+			bestSet.clear();
+			for(int i=0;i<inliers.size();i++){
+				bestSet.push_back(inliers[i]);
+			}
+		}
+	}
+	
+	//generate rot and trans matrixes with best inliers
+	vector<CvPoint3D32f> chosenPoints;
+	vector<CvPoint2D32f> chosenImagePoints;	
+	vector<int> randomPoints = bestSet;
+
+	//do not change the first one, because it's the reference 
+	chosenPoints.push_back(objectPoints[0]);
+	chosenImagePoints.push_back(imagePoints[0]);
+
+	for(int i=1;i<RANSAC_SAMPLES;i++){
+		int index = randomPoints[i];
+		if(index<objectPoints.size()){
+			chosenPoints.push_back(objectPoints[index]);
+			chosenImagePoints.push_back(imagePoints[index]);
+		//	printf("%f %f\n",imagePoints[index].x,imagePoints[index].y);
+		}
+
+	}
+	//printf("\n");
+	printf("Using %d out of %d (%lf)\n",bestSet.size(),imagePoints.size(),minDist);
+
+	if(minDist<10000){
+	CvPOSITObject *positObject = cvCreatePOSITObject( &chosenPoints[0], static_cast<int>(chosenPoints.size()) );
+	//set posit termination criteria: 1000 max iterations, convergence epsilon 1.0e-5
+
+	CvTermCriteria criteria = cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 1000, 1.0e-5 );			
+	cvPOSIT( positObject, &chosenImagePoints[0], focus, criteria, rotation_matrix, translation_vector );
+
+	cvReleasePOSITObject (&positObject);
+	}
+	
+	
+}
+
+
+
+
 
 std::vector<CvPoint3D32f> modelPoints;
 
@@ -359,17 +665,23 @@ void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matri
 	}
 
 	
-	if(modelPoints.size()==numOfTrackingPoints){		
-		CvPOSITObject *positObject = cvCreatePOSITObject( &modelPoints[0], static_cast<int>(modelPoints.size()) );
-
-
-		//set posit termination criteria: 1000 max iterations, convergence epsilon 1.0e-5
-		CvTermCriteria criteria = cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 1000, 1.0e-5 );
+	if(modelPoints.size()==numOfTrackingPoints){
 		
-		cvPOSIT( positObject, &imagePoints[0], focus, criteria, rotation_matrix, translation_vector ); 
-		cvReleasePOSITObject (&positObject);
+		if(USE_RANSAC){
+			ransac(imagePoints,modelPoints,rotation_matrix, translation_vector,focus,myImage);
+		}
+		else{
+		
+			CvPOSITObject *positObject = cvCreatePOSITObject( &modelPoints[0], static_cast<int>(modelPoints.size()) );
+			//set posit termination criteria: 1000 max iterations, convergence epsilon 1.0e-5
+			CvTermCriteria criteria = cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 1000, 1.0e-5 );
+			
+			cvPOSIT( positObject, &imagePoints[0], focus, criteria, rotation_matrix, translation_vector ); 
+			cvReleasePOSITObject (&positObject);
+		}
 
 	}
+	
 	
 	//printMatrixData(rotation_matrix,translation_vector);
 	
@@ -480,7 +792,7 @@ CvCapture* capture = 0;
 //TODO: in case different types of input are required, change this variable
 int initializeCapture(){
 	if(!capture){
-		capture = cvCaptureFromCAM(0);	
+		capture = cvCaptureFromCAM(1);	
 	}
 	if( !capture )
 	{
@@ -593,7 +905,7 @@ void getHeadBounds(int* headRefX,int* headRefY,int* aLastHeadW,int* aLastHeadH){
  */
 
 void ehciInit(){
-	cvNamedWindow( "EHCI Window", 0 );	
+	cvNamedWindow( "EHCI Window", 0);//CV_WINDOW_AUTOSIZE );	
 }
 
 int ehciLoop(int mode,int initialGuess){	
