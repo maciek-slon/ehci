@@ -792,7 +792,7 @@ CvCapture* capture = 0;
 //TODO: in case different types of input are required, change this variable
 int initializeCapture(){
 	if(!capture){
-		capture = cvCaptureFromCAM(1);	
+		capture = cvCaptureFromCAM(0);	
 	}
 	if( !capture )
 	{
