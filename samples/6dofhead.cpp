@@ -97,6 +97,40 @@ void drawReferenceAxis(){
 	glVertex3f( 0.0f,0.0f,0.0f);
 	glVertex3f( 1000.0f,0.0f,0.0f);	
 	glEnd();
+	/*
+	double modelview[16], projection[16];
+	int viewport[4];
+	float z;
+	//get the projection matrix		
+	glGetDoublev( GL_PROJECTION_MATRIX, projection );
+	//get the modelview matrix		
+	glGetDoublev( GL_MODELVIEW_MATRIX, modelview );
+	//get the viewport		
+	glGetIntegerv( GL_VIEWPORT, viewport );
+	
+	printf("Projection Matrix:\n");
+	for(int i=0;i<4;i++){
+		for(int j=0;j<4;j++){
+			printf("%lf ",projection[i*4+j]);
+		}
+		printf("\n");
+	}
+	printf("\n");
+	
+	printf("Modelview Matrix:\n");
+	for(int i=0;i<4;i++){
+		for(int j=0;j<4;j++){
+			printf("%lf ",modelview[i*4+j]);
+		}
+		printf("\n");
+	}
+	printf("\n");
+	
+	printf("Viewport Matrix:\n");
+	for(int i=0;i<4;i++){
+		printf("%d ",viewport[i]);			
+	}
+	printf("\n");*/
 
 
 	glBegin(GL_LINES);
@@ -459,6 +493,7 @@ void DrawGLScene(void)
 	drawHelpText();
 	
 	glutSwapBuffers();
+	//cvWaitKey();
 
 	//automatic reinitialization
 	if(detected) initialGuess=0;
