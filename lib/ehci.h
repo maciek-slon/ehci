@@ -7,15 +7,21 @@
 #include <stdio.h>
 #include <vector>
 #include <list>
+#include <string>
 
-#define USE_RANSAC 1
-#define RANSAC_SAMPLES 8
-#define RANSAC_DISTANCE_THRESHOLD 30.0
 
-#define EHCIMODELSCALE 50
-#define EHCIFOCUS  602
+//these values are overiden in case data/config.ini
+//is loaded with these values
+int USE_RANSAC=1;
+int RANSAC_SAMPLES=8;
+double RANSAC_DISTANCE_THRESHOLD = 30.0;
+int RANSAC_ITERATIONS = 20;
 
-using namespace std;
+float EHCIMODELSCALE = 1.0;//50;
+int EHCIFOCUS  = 602;
+
+int chosenCamera = 0;
+char* movieFile=0;
 
 ///ehci loop modes
 ///EHCI2DFACEDETECT - only makes 2d facedetect
@@ -49,6 +55,8 @@ int ehciLoop(int mode, int initialGuess);
 void getHeadBounds(int* headRefX,int* headRefY,int* aLastHeadW,int* aLastHeadH);
 
 void getReferenceHeadBounds(int* headRefX,int* headRefY,int* aLastHeadW,int* aLastHeadH);
+
+void getReferenceCoordinate(float* x, float* y, float* z);
 
 
 void getGlPositMatrix(double myGlPositMatrix[16]);

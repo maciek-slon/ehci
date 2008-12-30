@@ -1,5 +1,5 @@
 #include "ehci.h"
-
+using namespace std;
 
 
 
@@ -12,8 +12,8 @@
 void loadCascade(CvHaarClassifierCascade** cascade, char* fileName){	
 
 	*cascade = (CvHaarClassifierCascade*)cvLoad( fileName, 0, 0, 0 );
-	
-	
+
+
 	if( !(*cascade) ){
 		printf( "ERROR: Could not load classifier cascade. The required file '%s' should be in a 'data' subdirectory under the directory in which the application is being run.\n"
 				, fileName);
@@ -37,31 +37,31 @@ int detect_and_draw( IplImage* small_img, int mode,double scale, CvPoint* upperH
 	cvClearMemStorage( storage );
 
 	//if(mode & EHCI2DFACEDETECT){
-	
-		if( cascade )
-		{
-			
-			double t = (double)cvGetTickCount();
-			CvSeq* faces = cvHaarDetectObjects( small_img, cascade, storage,
-					1.2, 2, 0
-					|CV_HAAR_FIND_BIGGEST_OBJECT
-					//|CV_HAAR_DO_ROUGH_SEARCH
-					//|CV_HAAR_DO_CANNY_PRUNING
-					//|CV_HAAR_SCALE_IMAGE
-					,
-					cvSize(40, 40) );
-			t = (double)cvGetTickCount() - t;
-			//        printf( "detection time = %gms\n", t/((double)cvGetTickFrequency()*1000.) );
-			for( i = 0; i < (faces ? faces->total : 0); i++ )
-			{				
-				CvRect* r = (CvRect*)cvGetSeqElem( faces, i );
-				*upperHeadCorner= cvPoint(r->x*scale,r->y*scale);			
-				*headWidth=r->width*scale;
-				*headHeight=r->height*scale;
-				detected++;//used to return function value
-			}
+
+	if( cascade )
+	{
+
+		double t = (double)cvGetTickCount();
+		CvSeq* faces = cvHaarDetectObjects( small_img, cascade, storage,
+				1.2, 2, 0
+				|CV_HAAR_FIND_BIGGEST_OBJECT
+				//|CV_HAAR_DO_ROUGH_SEARCH
+				//|CV_HAAR_DO_CANNY_PRUNING
+				//|CV_HAAR_SCALE_IMAGE
+				,
+				cvSize(40, 40) );
+		t = (double)cvGetTickCount() - t;
+		//        printf( "detection time = %gms\n", t/((double)cvGetTickFrequency()*1000.) );
+		for( i = 0; i < (faces ? faces->total : 0); i++ )
+		{				
+			CvRect* r = (CvRect*)cvGetSeqElem( faces, i );
+			*upperHeadCorner= cvPoint(r->x*scale,r->y*scale);			
+			*headWidth=r->width*scale;
+			*headHeight=r->height*scale;
+			detected++;//used to return function value
 		}
-//	}
+	}
+	//	}
 
 
 
@@ -79,28 +79,28 @@ int detect_and_draw( IplImage* small_img, int mode,double scale, CvPoint* upperH
 CvHaarClassifierCascade* headCascade=0;
 CvHaarClassifierCascade* handCascade=0;
 int getObjectPosition(IplImage* frame,int mode, CvPoint* upperHeadCorner,int* headWidth,int* headHeight ){
-	
+
 	static CvMemStorage* storage;
 	int detected;
 	double scale = 2.0;
-			
+
 	if(!headCascade){
 		loadCascade(&headCascade,"data/haarcascade_frontalface_default.xml");
 		loadCascade(&handCascade,"data/aGest.xml");
 		storage = cvCreateMemStorage(0);
 	}
-	
-	
+
+
 	IplImage *frame_copy = 0;
 	frame_copy = cvCreateImage( cvSize(frame->width,frame->height), IPL_DEPTH_8U, frame->nChannels );
-	
+
 	cvCopy( frame, frame_copy, 0 );
-	
-	
+
+
 	IplImage *gray, *small_img;
-		
-	
-	
+
+
+
 
 	gray = cvCreateImage( cvSize(frame_copy->width,frame_copy->height), 8, 1 );
 	small_img = cvCreateImage( cvSize( cvRound (frame_copy->width/scale),
@@ -109,9 +109,9 @@ int getObjectPosition(IplImage* frame,int mode, CvPoint* upperHeadCorner,int* he
 	cvCvtColor( frame_copy, gray, CV_BGR2GRAY );
 	cvResize( gray, small_img, CV_INTER_LINEAR );
 	cvEqualizeHist( small_img, small_img );
-	
-	
-	
+
+
+
 	if(mode&EHCI2DFACEDETECT){
 		detected = detect_and_draw(small_img,mode,scale,upperHeadCorner,headWidth,headHeight,headCascade,storage);
 		cvRectangle(frame, *upperHeadCorner, cvPoint(upperHeadCorner->x + *headWidth,upperHeadCorner->y + *headHeight), cvScalar(0,0,255), 1);
@@ -124,7 +124,7 @@ int getObjectPosition(IplImage* frame,int mode, CvPoint* upperHeadCorner,int* he
 	cvReleaseImage( &frame_copy );
 	cvReleaseImage( &gray );
 	cvReleaseImage( &small_img );
-	
+
 	return detected;
 
 }
@@ -148,7 +148,7 @@ void updateGlPositMatrix(CvMatr32f rotation_matrix,CvVect32f translation_vector)
 	glPositMatrix[9] =  rotation_matrix[5];
 	glPositMatrix[10] = rotation_matrix[8];
 	glPositMatrix[11] = 0.0;
-	
+
 	glPositMatrix[12] =  translation_vector[0];
 	glPositMatrix[13] =  translation_vector[1]; 
 	glPositMatrix[14] =  translation_vector[2];
@@ -164,9 +164,9 @@ void updateGlPositMatrix(CvMatr32f rotation_matrix,CvVect32f translation_vector)
 void getGlPositMatrix(double myGlPositMatrix[16]){
 	for(int i=0;i<16;i++)
 		myGlPositMatrix[i] = glPositMatrix[i];
-	
+
 }
- 
+
 void setInitialRTMatrix(CvMatr32f rotation_matrix,CvVect32f translation_vector){
 
 
@@ -186,7 +186,7 @@ void setInitialRTMatrix(CvMatr32f rotation_matrix,CvVect32f translation_vector){
  */
 
 /*
-  
+
 float vertices[4719];
 
 float points3d[NUMPTS][4]={ {0,0,0,1},{100*scale,0,0,1},{75*scale,-100*scale,0,1},{25*scale,-100*scale,0,1},
@@ -204,7 +204,7 @@ float myRotz[] = { cos(gama),  -sin(gama),    0,  1.874*dScale,
 		sin(gama),   cos(gama),    0,  -1.999*dScale,
 		0, 	0,  	1,  	    -2.643*dScale,
 		0,  0,  0,  1 };
-		
+
 void loadVertices(){
 	int pos = 0;
 	FILE* in = fopen("vertices.txt","r");
@@ -269,7 +269,7 @@ void plot2dModel(CvMatr32f rotation_matrix,CvVect32f translation_vector){
 	}
 
 }
-*/
+ */
 
 
 
@@ -284,7 +284,71 @@ void printMatrixData(CvMatr32f rotation_matrix, CvVect32f translation_vector){
 	printf("\n");
 }
 
+float referenceCoordinateX,referenceCoordinateY,referenceCoordinateZ;
+void setReferenceCoordinate(float x, float y, float z){
+	referenceCoordinateX = x;
+	referenceCoordinateY = y;
+	referenceCoordinateZ = z;
+	
+}
 
+/*
+ * Returns the first object point coordinate, the one the matrix refers to
+ * 
+ */
+void getReferenceCoordinate(float* x, float* y, float* z){
+	*x = referenceCoordinateX;
+	*y = referenceCoordinateY;
+	*z = referenceCoordinateZ;
+}
+
+
+
+/*
+ * 
+ * Returns the threshold based in a 95% inlier probability, 
+ * in case a gaussian distribuition for the error is used as hypothesis
+ * according to Multiple View Geometry in Computer Vision
+ * 
+ */
+double getDistanceThreshold(CvMat Ma,CvMat Mp,CvMat* Mpoints,CvMat Mlook,int NUMPTS,vector<CvPoint2D32f> imagePoints){
+	vector<double> distanceErrors;
+	CvMat* Mr1 =  cvCreateMat(4,1,CV_32FC1);
+
+	double errorSum = 0;
+	//printf("Distances\n");
+	for(int w=0;w<NUMPTS;w++){
+		cvMatMul(&Ma,&Mpoints[w],Mr1);				
+		cvMatMul(&Mp,Mr1,Mr1);
+
+		//fazer o look at para o posit
+		cvMatMul(&Mlook,Mr1,Mr1);
+
+		double xWinPosition =cvmGet(Mr1,0,0)/cvmGet(Mr1,3,0)*320; 
+		double yWinPosition =cvmGet(Mr1,1,0)/cvmGet(Mr1,3,0)*240;
+		double dx = xWinPosition - imagePoints[w].x ;
+		double dy = yWinPosition - (-imagePoints[w].y );//estao com sinais trocados
+		double pointDistance = sqrt(dx*dx+dy*dy);
+		errorSum+=pointDistance;
+		distanceErrors.push_back(pointDistance);
+		//printf("%3.2lf ",pointDistance);
+
+	}
+	//printf("\n");
+	double deviations = 0;
+	double meanError = errorSum/NUMPTS;
+	for(int i=0;i<NUMPTS;i++){
+		deviations+=(distanceErrors[i]-meanError)*(distanceErrors[i]-meanError);
+	}
+	//printf("Deviations %lf numpts %d mean error %lf errorSum %lf\n",deviations, NUMPTS,meanError,errorSum);
+	double sigma = sqrt(deviations/NUMPTS);
+
+
+	cvReleaseMat(&Mr1);
+
+	return sqrt(5.99 * sigma*sigma);
+
+}
 //returns the inliers indexes in the inliers vector
 //returns the sum of the distances
 double plot2dModel(CvMatr32f rotation_matrix,CvVect32f translation_vector,
@@ -294,14 +358,14 @@ double plot2dModel(CvMatr32f rotation_matrix,CvVect32f translation_vector,
 			rotation_matrix[3],  rotation_matrix[4],  rotation_matrix[5], translation_vector[1],
 			rotation_matrix[6],  rotation_matrix[7],  rotation_matrix[8], translation_vector[2],
 			0,  0,  0,  1 };
-	
+
 	float projectionMatrix[16];
 	double farPlane=10000.0;
 	double nearPlane=1.0;
 	double width = 640;
 	double height = 480;
 	double focalLength = EHCIFOCUS;
-	
+
 	//TODO: trocar para os originais comentados
 	projectionMatrix[0] = 2*focalLength/width;
 	projectionMatrix[1] = 0.0;
@@ -325,65 +389,65 @@ double plot2dModel(CvMatr32f rotation_matrix,CvVect32f translation_vector,
 	projectionMatrix[15] = 0.0;
 
 
-	
-	
+
+
 
 
 	float pos[] = {0,0,0};
 
 	CvMat Ma = cvMat(4, 4, CV_32FC1, a);
-	
+
 	CvMat Mp = cvMat(4, 4, CV_32FC1, projectionMatrix);
 
 	int NUMPTS = objectPoints.size();
 	int w;
 	CvMat Mpoints[500];
 	float pontos[500][4];
-	
-	
+
+
 	pontos[0][0] =  0;
 	pontos[0][1] =  0;
 	pontos[0][2] =  0;
 	pontos[0][3] =  1.0;
-	
+
 	pontos[1][0] =  50.0;
 	pontos[1][1] =  0;
 	pontos[1][2] =  0;
 	pontos[1][3] =  1.0;
-	
+
 	pontos[2][0] =  0.0;
 	pontos[2][1] =  50.0;
 	pontos[2][2] =  0;
 	pontos[2][3] =  1.0;
-	
 
-	
+
+
 	for(w=0;w<NUMPTS;w++){
 		//fazendo tambem a mudanca de coordenada para o ponto 0
 		pontos[w][0] =  objectPoints[w].x - objectPoints[0].x;
 		pontos[w][1] =  objectPoints[w].y - objectPoints[0].y;
 		pontos[w][2] =  objectPoints[w].z - objectPoints[0].z;
 		pontos[w][3] =  1.0;
-		
+
 		Mpoints[w] = cvMat( 4, 1, CV_32FC1,&pontos[w]);//&objectPoints[w]);
-		
-		
+
+
 		/*cvmSet(&Mpoints[w],0,0,objectPoints[w].x);
 		cvmSet(&Mpoints[w],1,0,objectPoints[w].y);
 		cvmSet(&Mpoints[w],2,0,objectPoints[w].z);
 		cvmSet(&Mpoints[w],3,0,2.0);*/
 	}
-	
+
 	CvPoint3D32f origem;
 	origem.x = 0;
 	origem.y = 0;
 	origem.z = 0;	
-	
+
 	Mpoints[w]= cvMat( 4, 1, CV_32FC1,&origem);
 	cvmSet(&Mpoints[w],3,0,1.0);
 
 	CvMat* Mr1 =  cvCreateMat(4,1,CV_32FC1);
-	
+
 	float up[] = {0.0 ,-1.0 , 0.0 };
 	float s[] =  {-1.0 , 0.0,  0.0};
 	float f[] =  { 0.0 , 0.0 , 1.0 };
@@ -394,22 +458,25 @@ double plot2dModel(CvMatr32f rotation_matrix,CvVect32f translation_vector,
 			-f[0],-f[1],-f[2],0,
 			0   ,  0   , 0   ,1};
 	CvMat Mlook = cvMat(4, 4, CV_32FC1, look);
-	
-	//TODO: calcular distancia
+
 	double distance = 0;
+	double threshold = getDistanceThreshold(Ma,Mp,Mpoints,Mlook,NUMPTS,imagePoints);
+	printf("Sigma = %lf\n",threshold);
+
+	//TODO: find out why some sigmas are nan
+
+	if(!isnan(threshold)){
+		for(w=0;w<NUMPTS;w++){
+			//for(w=0;w<=2;w++){
+
+			cvMatMul(&Ma,&Mpoints[w],Mr1);				
+			cvMatMul(&Mp,Mr1,Mr1);
 
 
-	for(w=0;w<NUMPTS;w++){
-	//for(w=0;w<=2;w++){
+			//fazer o look at para o posit
+			cvMatMul(&Mlook,Mr1,Mr1);
 
-		cvMatMul(&Ma,&Mpoints[w],Mr1);				
-		cvMatMul(&Mp,Mr1,Mr1);
-		
-		
-		//fazer o look at para o posit
-		cvMatMul(&Mlook,Mr1,Mr1);
-		
-		if(w==NUMPTS){
+			/*if(w==NUMPTS){
 			printf("CvModelView Matrix:\n");
 			for(int i=0;i<4;i++){
 				for(int j=0;j<4;j++){
@@ -418,10 +485,10 @@ double plot2dModel(CvMatr32f rotation_matrix,CvVect32f translation_vector,
 				printf("\n");
 			}
 			printf("\n");
-			
+
 			CvMat* Mpro =  cvCreateMat(4,4,CV_32FC1);
 			cvMatMul(&Mlook,&Mp,Mpro);
-			
+
 			printf("CvProjection Matrix:\n");
 			for(int i=0;i<4;i++){
 				for(int j=0;j<4;j++){
@@ -430,42 +497,47 @@ double plot2dModel(CvMatr32f rotation_matrix,CvVect32f translation_vector,
 				printf("\n");
 			}
 			printf("\n");
-			
-		}
-		
-		
-		double xWinPosition =cvmGet(Mr1,0,0)/cvmGet(Mr1,3,0)*320; 
-		double yWinPosition =cvmGet(Mr1,1,0)/cvmGet(Mr1,3,0)*240;
-		double dx = xWinPosition - imagePoints[w].x ;
-		double dy = yWinPosition - (-imagePoints[w].y );//estao com sinais trocados
-		
-		double pointDistance = sqrt(dx*dx+dy*dy);
-		//if(pointDistance>distance) distance = pointDistance;
-		distance += pointDistance;
-		if(pointDistance>RANSAC_DISTANCE_THRESHOLD){
-			//printf("Outlier %d %lf\n",w,pointDistance);
-		}
-		else{
-			inliers->push_back(w);
-		}
-		//printf("%3.2lf %3.2lf ipx %3.2lf ipy %3.2lf dx %3.2lf dy %3.2lf pdist %3.2lf dist %3.2lf\n",xWinPosition,yWinPosition,imagePoints[w].x,imagePoints[w].y,dx,dy,pointDistance,distance);
-		
-		//		printf("coord %f %f ",cvmGet(&Mpoints[w],0,0),cvmGet(&Mpoints[w],1,0));
-		//		printf("coord %f %f\n",cvmGet(Mr1,0,0),cvmGet(Mr1,1,0));
-		
-		//Debug information
-		//cvRectangle(image,cvPoint(0,0),cvPoint(160,120),CV_RGB(0,150,0),2,0,0);
-		//cvCircle( image,cvPoint(xWinPosition+320,-yWinPosition+240), w==NUMPTS?8:3, CV_RGB(0,0,200) , -1, 8,0);
-		
-		
-		//printf("%3.3lf %3.3lf %3.3lf %3.3lf (%3.3lf,%3.3lf,%3.3lf,%3.3lf)\n",cvmGet(Mr1,0,0),cvmGet(Mr1,1,0),
-//				cvmGet(Mr1,2,0),cvmGet(Mr1,3,0),cvmGet(&Mpoints[w],0,0),cvmGet(&Mpoints[w],1,0),cvmGet(&Mpoints[w],2,0),cvmGet(&Mpoints[w],3,0));
-		//cvCircle( image, cvPoint(160+1000*cvmGet(Mr1,0,0)/cvmGet(Mr1,2,0),120+1000*cvmGet(Mr1,1,0)/cvmGet(Mr1,2,0)), w==0?8:3, CV_RGB(0,0,200) , -1, 8,0);
 
+		}*/
+
+
+			double xWinPosition =cvmGet(Mr1,0,0)/cvmGet(Mr1,3,0)*320; 
+			double yWinPosition =cvmGet(Mr1,1,0)/cvmGet(Mr1,3,0)*240;
+			double dx = xWinPosition - imagePoints[w].x ;
+			double dy = yWinPosition - (-imagePoints[w].y );//estao com sinais trocados
+
+			double pointDistance = sqrt(dx*dx+dy*dy);
+
+
+			//if(pointDistance>distance) distance = pointDistance;
+			distance += pointDistance;
+
+
+			if(pointDistance>RANSAC_DISTANCE_THRESHOLD){//threshold){//
+				//printf("Outlier %d %lf\n",w,pointDistance);
+			}
+			else{
+				inliers->push_back(w);
+			}
+			//printf("%3.2lf %3.2lf ipx %3.2lf ipy %3.2lf dx %3.2lf dy %3.2lf pdist %3.2lf dist %3.2lf\n",xWinPosition,yWinPosition,imagePoints[w].x,imagePoints[w].y,dx,dy,pointDistance,distance);
+
+			//		printf("coord %f %f ",cvmGet(&Mpoints[w],0,0),cvmGet(&Mpoints[w],1,0));
+			//		printf("coord %f %f\n",cvmGet(Mr1,0,0),cvmGet(Mr1,1,0));
+
+			//Debug information
+			//cvRectangle(image,cvPoint(0,0),cvPoint(160,120),CV_RGB(0,150,0),2,0,0);
+			//cvCircle( image,cvPoint(xWinPosition+320,-yWinPosition+240), w==NUMPTS?8:3, CV_RGB(0,0,200) , -1, 8,0);
+
+
+			//printf("%3.3lf %3.3lf %3.3lf %3.3lf (%3.3lf,%3.3lf,%3.3lf,%3.3lf)\n",cvmGet(Mr1,0,0),cvmGet(Mr1,1,0),
+			//				cvmGet(Mr1,2,0),cvmGet(Mr1,3,0),cvmGet(&Mpoints[w],0,0),cvmGet(&Mpoints[w],1,0),cvmGet(&Mpoints[w],2,0),cvmGet(&Mpoints[w],3,0));
+			//cvCircle( image, cvPoint(160+1000*cvmGet(Mr1,0,0)/cvmGet(Mr1,2,0),120+1000*cvmGet(Mr1,1,0)/cvmGet(Mr1,2,0)), w==0?8:3, CV_RGB(0,0,200) , -1, 8,0);
+
+		}
+		//printf("\n");
+		//printf("Sum of distances %lf\n",distance);
 	}
-	printf("\n");
-	printf("Sum of distances %lf\n",distance);
-	
+
 	cvReleaseMat(&Mr1);
 
 	return distance;
@@ -488,14 +560,56 @@ vector<int> getRandomSet(int sampleSize, int setSize){
 		randomSet.push_back(lista[pos]);
 		lista.erase(lista.begin()+pos);		
 	}
-	printf("Random set: ");
+	/*printf("Random set: ");
 	for(int i=0;i<randomSet.size();i++){
 		printf("%d ",randomSet[i]);
 	}
-	printf("\n");
+	printf("\n");*/
 	return randomSet;
-	
+
 }
+
+//TODO: correct this function and ransac() so that the reference point can be an outlier
+
+int getMatrixUsingPosit(vector<CvPoint2D32f> imagePoints, vector<CvPoint3D32f> objectPoints, 
+		vector<int> selectedPoints,int focus, CvMatr32f rotation_matrix, CvVect32f translation_vector){
+
+	vector<CvPoint3D32f> chosenPoints;
+	vector<CvPoint2D32f> chosenImagePoints;
+	//do not change the first one, because it's the reference 
+	chosenPoints.push_back(objectPoints[0]);
+	chosenImagePoints.push_back(imagePoints[0]);
+
+	for(int i=1;i<selectedPoints.size();i++){
+		int index = selectedPoints[i];
+		if(index<objectPoints.size()){
+			chosenPoints.push_back(objectPoints[index]);
+			chosenImagePoints.push_back(imagePoints[index]);
+			//printf("%f %f\n",imagePoints[index].x,imagePoints[index].y);
+		}
+
+	}
+
+	if(selectedPoints.size()>=4){
+
+		CvPOSITObject *positObject = cvCreatePOSITObject( &chosenPoints[0], static_cast<int>(chosenPoints.size()) );
+		//set posit termination criteria: 1000 max iterations, convergence epsilon 1.0e-5
+
+		CvTermCriteria criteria = cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 1000, 1.0e-5 );			
+		cvPOSIT( positObject, &chosenImagePoints[0], focus, criteria, rotation_matrix, translation_vector );
+
+		cvReleasePOSITObject (&positObject);
+	}
+	else{
+		printf("Error: no posit: number of points %d\n",chosenPoints.size());
+		return 1;//error
+
+	}
+
+	return 0;
+
+}
+
 
 /**
  * This function is implemented as in 'Multiple View Geometry in Computer Vision'
@@ -506,90 +620,53 @@ vector<int> getRandomSet(int sampleSize, int setSize){
  * 
  */
 
-void ransac( vector<CvPoint2D32f> imagePoints, vector<CvPoint3D32f> objectPoints,
-				CvMatr32f rotation_matrix, CvVect32f translation_vector, int focus,IplImage* myImage){
-	
+int ransac( vector<CvPoint2D32f> imagePoints, vector<CvPoint3D32f> objectPoints,
+		CvMatr32f rotation_matrix, CvVect32f translation_vector, int focus,IplImage* myImage){
+
 	vector<int> bestSet;
 	double minDist=10000000;
-	for(int k=0;k<20;k++){
-		//only choose first 4 points:
-		vector<CvPoint3D32f> chosenPoints;
-		vector<CvPoint2D32f> chosenImagePoints;
+	CvMatr32f rotationTestMatrix = new float[9];
+	CvVect32f translationTestVector = new float[3];
+	int bestSize = 0;
+
+
+	for(int k=0;k<RANSAC_ITERATIONS;k++){
+		//only choose first 4 points:	
 		vector<int> randomPoints = getRandomSet(imagePoints.size(),RANSAC_SAMPLES);
-		
-		//do not change the first one, because it's the reference 
-		chosenPoints.push_back(objectPoints[0]);
-		chosenImagePoints.push_back(imagePoints[0]);
-		
-		for(int i=1;i<RANSAC_SAMPLES;i++){
-			int index = randomPoints[i];
-			if(index<objectPoints.size()){
-				chosenPoints.push_back(objectPoints[index]);
-				chosenImagePoints.push_back(imagePoints[index]);
-				//printf("%f %f\n",imagePoints[index].x,imagePoints[index].y);
-			}
-			
-		}
-		
-		
-		CvPOSITObject *positObject = cvCreatePOSITObject( &chosenPoints[0], static_cast<int>(chosenPoints.size()) );
-		//set posit termination criteria: 1000 max iterations, convergence epsilon 1.0e-5
-		
-		CvTermCriteria criteria = cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 1000, 1.0e-5 );			
-		cvPOSIT( positObject, &chosenImagePoints[0], focus, criteria, rotation_matrix, translation_vector );
-			
-		cvReleasePOSITObject (&positObject);
-		
+		getMatrixUsingPosit(imagePoints,objectPoints,randomPoints,focus,rotationTestMatrix, translationTestVector);
+
 		vector<int> inliers;
-		double distance = plot2dModel(rotation_matrix,translation_vector,objectPoints,myImage,imagePoints,&inliers);
+		double distance = plot2dModel(rotationTestMatrix ,translationTestVector,objectPoints,myImage,imagePoints,&inliers);
 		//printf("Found %d inliers\n",inliers.size());
-		//if(inliers.size()>bestSize){
-		if(distance<minDist){
-			//bestSize = inliers.size();
-			minDist = distance;
+		if(inliers.size()>bestSize){
+			//if(distance<minDist){
+			bestSize = inliers.size();
+			//minDist = distance;
 			bestSet.clear();
 			for(int i=0;i<inliers.size();i++){
 				bestSet.push_back(inliers[i]);
 			}
 		}
 	}
-	
-	//generate rot and trans matrixes with best inliers
-	vector<CvPoint3D32f> chosenPoints;
-	vector<CvPoint2D32f> chosenImagePoints;	
-	vector<int> randomPoints = bestSet;
 
-	//do not change the first one, because it's the reference 
-	chosenPoints.push_back(objectPoints[0]);
-	chosenImagePoints.push_back(imagePoints[0]);
+	delete [] rotationTestMatrix;
+	delete [] translationTestVector;
 
-	for(int i=1;i<RANSAC_SAMPLES;i++){
-		int index = randomPoints[i];
-		if(index<objectPoints.size()){
-			chosenPoints.push_back(objectPoints[index]);
-			chosenImagePoints.push_back(imagePoints[index]);
-		//	printf("%f %f\n",imagePoints[index].x,imagePoints[index].y);
-		}
 
-	}
-	//printf("\n");
-	printf("Using %d out of %d (%lf)\n",bestSet.size(),imagePoints.size(),minDist);
-
-	if(minDist<10000){
-	CvPOSITObject *positObject = cvCreatePOSITObject( &chosenPoints[0], static_cast<int>(chosenPoints.size()) );
-	//set posit termination criteria: 1000 max iterations, convergence epsilon 1.0e-5
-
-	CvTermCriteria criteria = cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 1000, 1.0e-5 );			
-	cvPOSIT( positObject, &chosenImagePoints[0], focus, criteria, rotation_matrix, translation_vector );
-
-	cvReleasePOSITObject (&positObject);
-	}
-	
-	
+	//generate rot and trans matrixes with best inliers	
+	//now use the bestSet to retrieve the rotation and translation matrixes
+	return getMatrixUsingPosit(imagePoints,objectPoints,bestSet,focus,rotation_matrix, translation_vector);
 }
 
 
 
+
+void addPointCenteredReference(std::vector<CvPoint2D32f> & imagePoints,CvPoint2D32f point){
+	CvPoint2D32f point2D;
+				point2D.x = cvPointFrom32f(point).x-320;
+				point2D.y = cvPointFrom32f(point).y-240;				
+				imagePoints.push_back( point2D );
+}
 
 
 std::vector<CvPoint3D32f> modelPoints;
@@ -622,38 +699,41 @@ void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matri
 
 		int px = cvPointFrom32f(points[i]).x - upperHeadCorner.x ;
 		int py = cvPointFrom32f(points[i]).y - upperHeadCorner.y ;
-		int vertIndex = cvRound(3036.0*myPixel[0]);
-		//glReadPixels(px,480-py,1,1,GL_RGBA,GL_FLOAT,&myPixel);
 		
-	
+		//glReadPixels(px,480-py,1,1,GL_RGBA,GL_FLOAT,&myPixel);
+
+
 		if(initialGuess){
-			
+
 			float fx = (1.6667 * px/(1.0*headWidth)) - 0.332;
 			float fy = (1.6667 * py/(1.0*headHeight)) - 0.332;
 			float fz = sin(fx*3.141593);//cos((px-0.5*headWidth)/headWidth * 1.2 *3.141593);
-			//printf("px %d py %d hw %d hh %d fx %f ifx %d fy %f fz %f\n",px,py,headWidth,headHeight,fx,int(fx*cScale),fy,fz);
+			printf("px %d py %d hw %d hh %d fx %f ifx %d fy %f fz %f\n",px,py,headWidth,headHeight,fx,int(fx*modelScale),fy,fz);
+
+			/*modelPoints.push_back(   cvPoint3D32f( 	(int)(fx * modelScale),
+					-(int)(fy * modelScale),	
+					(int)(fz * modelScale)));*/
 			
-			modelPoints.push_back(   cvPoint3D32f( 	(int)(fx * modelScale),
-												   -(int)(fy * modelScale),	
-													(int)(fz * modelScale)));
-			
+			modelPoints.push_back(   cvPoint3D32f( 	(fx * modelScale),
+					-(fy * modelScale),	
+					(fz * modelScale)));
+			if(i==0){
+				setReferenceCoordinate((fx * modelScale), -(fy * modelScale),	
+						(fz * modelScale));
+			}
+
 			/*modelPoints.push_back(   cvPoint3D32f( 	(int)(px/(1.0*headWidth)*cScale),
 					-(int)(py/(1.0*headHeight)*cScale),	
 					(int)(1.1*cScale*sin(px*3.141593/headWidth)) ));*/
 			//(px<headWidth/2.0)?(int)((headWidth/4.0)*(px/(headWidth/2.0))):(int)((headWidth/4.0)*((headWidth -px)/(1.0*headWidth)))
 
-			CvPoint2D32f point2D;
-			point2D.x = cvPointFrom32f(points[i]).x-320;
-			point2D.y = cvPointFrom32f(points[i]).y-240;				
-			imagePoints.push_back( point2D );
+			
+			addPointCenteredReference(imagePoints,points[i]);
 			//printf("Ip %f %f\n", point2D.x, point2D.y);
 
 		}
 		else if(numOfTrackingPoints==modelPoints.size()){
-			CvPoint2D32f point2D;
-			point2D.x = cvPointFrom32f(points[i]).x-320;
-			point2D.y = cvPointFrom32f(points[i]).y-240;
-			imagePoints.push_back( point2D );
+			addPointCenteredReference(imagePoints,points[i]);
 			//printf("Ip %f %f\n", point2D.x, point2D.y);
 
 		}
@@ -664,27 +744,28 @@ void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matri
 
 	}
 
-	
+
 	if(modelPoints.size()==numOfTrackingPoints){
-		
+
 		if(USE_RANSAC){
+
 			ransac(imagePoints,modelPoints,rotation_matrix, translation_vector,focus,myImage);
 		}
 		else{
-		
+
 			CvPOSITObject *positObject = cvCreatePOSITObject( &modelPoints[0], static_cast<int>(modelPoints.size()) );
 			//set posit termination criteria: 1000 max iterations, convergence epsilon 1.0e-5
 			CvTermCriteria criteria = cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 1000, 1.0e-5 );
-			
+
 			cvPOSIT( positObject, &imagePoints[0], focus, criteria, rotation_matrix, translation_vector ); 
 			cvReleasePOSITObject (&positObject);
 		}
 
 	}
-	
-	
+
+
 	//printMatrixData(rotation_matrix,translation_vector);
-	
+
 }
 
 /**
@@ -696,17 +777,17 @@ void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matri
 
 int insertNewPoints(IplImage* grey, int headX,int headY,int width, int height,
 		CvPoint2D32f* points){
-	
+
 	IplImage *result;
-	
+
 	// set ROI, you may use following two funs:
 	cvSetImageROI( grey, cvRect( headX, headY, width, height ));
 
 	// sub-image
 	result = cvCreateImage( cvSize(width, height), grey->depth, grey->nChannels );
-	
+
 	cvCopy(grey,result);
-	
+
 	cvResetImageROI(grey); // release image ROI
 
 
@@ -789,10 +870,22 @@ IplImage* getCurrentFrame(){
 
 
 CvCapture* capture = 0;
+CvVideoWriter* videoWriter = 0;
 //TODO: in case different types of input are required, change this variable
 int initializeCapture(){
-	if(!capture){
-		capture = cvCaptureFromCAM(0);	
+	if(!capture){		
+		
+		if(strcmp(movieFile,"NO")==0){
+			capture = cvCaptureFromCAM(chosenCamera);
+		}
+		else{
+			//printf("Trying to open %s\n",movieFile);
+			char temp[200];
+			sprintf(temp,"%s",movieFile);
+			
+			//cvCreateFileCapture parameter is const char
+			capture = cvCreateFileCapture(temp);
+		}
 	}
 	if( !capture )
 	{
@@ -809,7 +902,7 @@ int initializeCapture(){
 void update6dof(int headHeight, int headWidth,int initialGuess,int numberOfTrackingPoints){
 	static int flags = 0;	
 	int i,k;
-	
+
 	if( numberOfTrackingPoints > 0 )
 	{
 		cvCalcOpticalFlowPyrLK( prev_grey, grey, prev_pyramid, pyramid,
@@ -826,11 +919,11 @@ void update6dof(int headHeight, int headWidth,int initialGuess,int numberOfTrack
 			//draws points on image for debugging
 			cvCircle( image, cvPointFrom32f(points[1][i]), 4, CV_RGB(0,0,0), 0, 8,0);
 			cvCircle( image, cvPointFrom32f(points[1][i]), 3, CV_RGB(200,0,0), 0, 8,0);			
-			
+
 		}
 		numberOfTrackingPoints = k;
 	}
-	
+
 
 
 
@@ -851,7 +944,7 @@ void update6dof(int headHeight, int headWidth,int initialGuess,int numberOfTrack
 	CV_SWAP( prev_grey, grey, swap_temp );
 	CV_SWAP( prev_pyramid, pyramid, swap_temp );
 	CV_SWAP( points[0], points[1], swap_points );
-	
+
 }
 
 /**
@@ -900,12 +993,75 @@ void getHeadBounds(int* headRefX,int* headRefY,int* aLastHeadW,int* aLastHeadH){
 	*aLastHeadH = myHeadHeight;
 }
 
+int readInt(char* value){
+	int val;
+	sscanf(value,"%d",&val);
+	return val;
+}
+
+double readDouble(char* value){
+	double val;
+	sscanf(value,"%lf",&val);
+	return val;
+}
+string readString(char* value){
+	string ans = "";
+	char temp[200];
+	sscanf(value,"%s",temp);
+	ans = (string) temp;
+	return ans;
+}
+
+//TODO: use an xml and some parsing
+void readParameters(){
+	FILE* in = fopen("data/config.ini","r");
+	if(in){
+
+		char key[200],value[200];
+		while(fscanf(in,"%s%s",key,value)!=EOF){
+
+			if(strcmp(key,"USE_RANSAC")==0){				
+				USE_RANSAC = readInt(value);
+			}
+			else if(strcmp(key,"RANSAC_SAMPLES")==0){
+				RANSAC_SAMPLES = readInt(value);
+			}
+			else if(strcmp(key,"RANSAC_DISTANCE_THRESHOLD")==0){
+				RANSAC_DISTANCE_THRESHOLD = readDouble(value);
+			}
+			else if(strcmp(key,"RANSAC_ITERATIONS")==0){
+				RANSAC_ITERATIONS = readInt(value);
+			}
+			else if(strcmp(key,"CAMERA_INDEX")==0){
+				chosenCamera = readInt(value);
+			}
+			else if(strcmp(key,"OPEN_MOVIE")==0){
+				movieFile = (char*)(readString(value)).c_str();				
+			}
+
+		}
+
+		/*printf("RAN %d SAMP %d DIST %lf ITER %d\n"
+				,USE_RANSAC,RANSAC_SAMPLES,RANSAC_DISTANCE_THRESHOLD,
+				RANSAC_ITERATIONS);*/
+		fclose(in);
+	}
+	else{
+		char movie[] = "NO";
+		movieFile = (char*) movie;
+	}
+
+}
+
 /**
  * Deals with library initialization and creating debug windows.
  */
 
 void ehciInit(){
-	cvNamedWindow( "EHCI Window", 0);//CV_WINDOW_AUTOSIZE );	
+	cvNamedWindow( "EHCI Window", 0);//CV_WINDOW_AUTOSIZE );
+	
+	readParameters();
+	
 }
 
 int ehciLoop(int mode,int initialGuess){	
@@ -914,23 +1070,30 @@ int ehciLoop(int mode,int initialGuess){
 	int headWidth, headHeight,detectedHead=0;
 	CvPoint upperHandCorner;
 	int handWidth,handHeight,detectedHand=0; 
-	
-	
+
+	readParameters();
 
 	frame = 0;
+
 	
 	if(!initializeCapture())
 		return 0;
-	
-	
+
+
 	if(READFROMIMAGEFILE){
 		frame = cvLoadImage( "head.jpg", 1 );
 	}
 	else{
 		frame = cvQueryFrame( capture );
+		
 		if( !frame ){
-			
-			return 0;
+			//TODO: in case it's a movie, it needs to finish here
+			//exit(0);
+			//TODO: loop movie... isn't safe... correct this
+			capture=0;
+			initializeCapture();
+			frame = cvQueryFrame( capture );
+			//return 0;
 		}
 	}
 	cvFlip( frame, frame, 1 );
@@ -950,19 +1113,20 @@ int ehciLoop(int mode,int initialGuess){
 	}
 
 	cvCopy( frame, image, 0 );
+	
 	cvCvtColor( image, grey, CV_BGR2GRAY );
 
-	
+
 	detectedHead = getObjectPosition(image, mode,&upperHeadCorner,&headWidth,&headHeight );
-	
+
 	//TODO: refactor initialGuess code below to work with upperHandCorner, handWidth, and handHeight
 	//detectedHand = getObjectPosition(image, EHCI2DHANDDETECT,&upperHandCorner,&handWidth,&handHeight );
-	
-	
+
+
 	updateInternalHeadPosition(upperHeadCorner.x,upperHeadCorner.y,
 			headWidth,headHeight);
-	
-	
+
+
 	//main cvLoop, used to process events
 	cvWaitKey(5);
 
@@ -982,13 +1146,13 @@ int ehciLoop(int mode,int initialGuess){
 		int myLastHeadH = headHeight;
 		updateReferenceInternalHeadPosition(refX,refY,myLastHeadW,myLastHeadH);
 	}
-	
-	
+
+
 
 	if((mode & EHCI6DFACEDETECT) || (mode & EHCI6DHANDDETECT)){
 		update6dof(headHeight, headWidth, initialGuess,numberOfTrackingPoints);
 	}
-	
+
 	cvShowImage( "EHCI Window", image );
 
 	if(numberOfTrackingPoints<NUMPTS)
@@ -1002,7 +1166,7 @@ int ehciLoop(int mode,int initialGuess){
  * ehci cleanup code
  */
 void ehciExit(){
-	
+
 	cvDestroyWindow("EHCI Window");
 	cvReleaseCapture( &capture );
 }
