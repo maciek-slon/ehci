@@ -210,12 +210,17 @@ void drawSinusoidalHead(float scale,int headWidth,int headHeight, int myRefX,int
 
 void drawHeadModel(float scale,int headWidth,int headHeight, int myRefX,int myRefY){
 		
-	float deltaX = -(myRefX/(float)headWidth*5.0-2.5);	
-	float deltaY = myRefY/(float)headHeight*7.5-3.75;
-	float deltaZ = -4.0f * cos(deltaX/2.5*3.141593);
+	float deltaX = 0.0;//-(myRefX/(float)headWidth*5.0-2.5);	
+	float deltaY = 0.0;//myRefY/(float)headHeight*7.5-3.75;
+	float deltaZ = 0.0;//-4.0f * cos(deltaX/2.5*3.141593);
 	
 
-
+	getReferenceCoordinate(&deltaX,&deltaY,&deltaZ);
+	deltaX-=0.5;
+	deltaY+=0.5;
+	deltaZ+=0.5;
+	printf("Reference %f %f %f (%f)\n",deltaX,deltaY,deltaZ,scale);
+	
 	for(int i=0;i<3036;i++){
 		//glColor3f (i/3036.0, 0.0, 0.0);
 		
@@ -267,9 +272,9 @@ void drawHeadModel(float scale,int headWidth,int headHeight, int myRefX,int myRe
 		glColor4d (1.0, 1.0, 1.0,0.65);
 		
 		for(int j=0;j<3;j++){
-			glVertex3f(	scale* (triangles[i].vert[j][0]+deltaX),
-						scale* (triangles[i].vert[j][1]+deltaY),
-						scale* (triangles[i].vert[j][2]+deltaZ));
+			glVertex3f(	scale* (triangles[i].vert[j][0])-deltaX,
+						scale* (triangles[i].vert[j][1])-deltaY,
+						scale* (triangles[i].vert[j][2])-deltaZ);
 		}
 		glEnd();
 	}
@@ -483,7 +488,8 @@ void DrawGLScene(void)
 		//scale should be the same as Sinusoidal, but the head 
 		//is 5 units wide, so it's 5 times lower
 		
-		drawHeadModel(1.6*EHCIMODELSCALE/5.0f,aLastHeadW,aLastHeadH,headRefX,headRefY);		
+		//drawHeadModel(1.6*EHCIMODELSCALE/5.0f,aLastHeadW,aLastHeadH,headRefX,headRefY);
+		drawHeadModel(1.6f/5.0f,aLastHeadW,aLastHeadH,headRefX,headRefY);
 		
 
 		//glTranslatef(200.0,0,0.0f);
