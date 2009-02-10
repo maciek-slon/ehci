@@ -569,6 +569,7 @@ double plot2dModel(CvMatr32f rotation_matrix,CvVect32f translation_vector,
 				//printf("Outlier %d %lf\n",w,pointDistance);
 			}
 			else{
+				//cvCircle( image,cvPoint(xWinPosition+320,-yWinPosition+240), 1, CV_RGB(0,200,200) , -1, 8,0);
 				inliers->push_back(w);
 			}
 			//printf("%3.2lf %3.2lf ipx %3.2lf ipy %3.2lf dx %3.2lf dy %3.2lf pdist %3.2lf dist %3.2lf\n",xWinPosition,yWinPosition,imagePoints[w].x,imagePoints[w].y,dx,dy,pointDistance,distance);
@@ -678,10 +679,12 @@ int getMatrixUsingPosit(vector<CvPoint2D32f> imagePoints, vector<CvPoint3D32f> o
  * 3 - Use distance to filter outliers
  * 4 - Keep doing until some threshold of inliers size is found
  *
+ * correctedPoints will update the points vector without the outliers, and newNumPoints will return the number of inliers
  */
 
 int ransac( vector<CvPoint2D32f> imagePoints, vector<CvPoint3D32f> objectPoints,
-		CvMatr32f rotation_matrix, CvVect32f translation_vector, int focus,IplImage* myImage){
+		CvMatr32f rotation_matrix, CvVect32f translation_vector, int focus,IplImage* myImage,
+		CvPoint2D32f* correctedPoints,int* numberOfInliers){
 
 	vector<int> bestSet;
 	double minDist=10000000;
@@ -713,6 +716,17 @@ int ransac( vector<CvPoint2D32f> imagePoints, vector<CvPoint3D32f> objectPoints,
 	delete [] rotationTestMatrix;
 	delete [] translationTestVector;
 
+	//update corrected points
+	*numberOfInliers = bestSet.size();
+	printf("Trying to update points\n");
+	for(int i=0;i<bestSet.size();i++){
+		if(i==0) printf("Updated points\n");
+		CvPoint2D32f centeredPoint =imagePoints[bestSet[i]];
+		centeredPoint.x +=320;
+		centeredPoint.y +=240;
+		correctedPoints[i] = centeredPoint;
+	}
+
 
 	//generate rot and trans matrixes with best inliers
 	//now use the bestSet to retrieve the rotation and translation matrixes
@@ -734,7 +748,7 @@ void addPointCenteredReference(std::vector<CvPoint2D32f> & imagePoints,CvPoint2D
 void get3dModelCoordinates(int px,int py,float *fx,float* fy,float* fz, int headWidth, int headHeight){
 	*fx = (1.6667 * px/(1.0*headWidth)) - 0.332;
 	*fy = (1.6667 * py/(1.0*headHeight)) - 0.332;
-	*fz = sin(*fx*3.141593);
+	*fz = .5*sin(*fx*3.141593);
 }
 
 IplImage* generatedImage;
@@ -759,7 +773,7 @@ std::vector<CvPoint3D32f> modelPoints;
 
 void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matrix, CvVect32f translation_vector,
 		int numOfTrackingPoints,int focus,CvPoint2D32f* points, CvPoint upperHeadCorner,
-		int headWidth, int headHeight, float modelScale){
+		int headWidth, int headHeight, float modelScale, int* newNumberOfPoints){
 
 	int i;
 
@@ -811,7 +825,8 @@ void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matri
 			//printf("Ip %f %f\n", point2D.x, point2D.y);
 
 		}
-		else if(numOfTrackingPoints==modelPoints.size()){
+		else  if(numOfTrackingPoints==modelPoints.size()){
+			//else  if(numOfTrackingPoints==modelPoints.size()){
 			addPointCenteredReference(imagePoints,points[i]);
 			//printf("Ip %f %f\n", point2D.x, point2D.y);
 
@@ -825,10 +840,11 @@ void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matri
 
 
 	if(modelPoints.size()==numOfTrackingPoints){
-
+		printf("Updating\n");
 		if(USE_RANSAC){
-
-			ransac(imagePoints,modelPoints,rotation_matrix, translation_vector,focus,myImage);
+			int inliersNumber;
+			ransac(imagePoints,modelPoints,rotation_matrix, translation_vector,focus,myImage,points,&inliersNumber);
+			*newNumberOfPoints = inliersNumber;
 		}
 		else{
 
@@ -838,6 +854,7 @@ void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matri
 
 			cvPOSIT( positObject, &imagePoints[0], focus, criteria, rotation_matrix, translation_vector );
 			cvReleasePOSITObject (&positObject);
+			*newNumberOfPoints = numOfTrackingPoints;
 		}
 
 	}
@@ -1085,13 +1102,15 @@ void texture2world( CvPoint3D32f* worldCoordinate, int headWidth, int headHeight
 
 /**
  * Updates 6 degrees of freedom head tracking.
+ * returns the newNumberOfTrackingPoints, because they might have changed if ransac is being used
  */
 static int bootstrap=0;
-void update6dof(int headHeight, int headWidth,int initialGuess,int numberOfTrackingPoints,int mode){
+int update6dof(int headHeight, int headWidth,int initialGuess,int numberOfTrackingPoints,int mode){
 	static int flags = 0;
 	int i,k;
 
 	if(mode == EHCI6DFACEDETECTKEYFRAME && bootstrap){//generatedImage && !initialGuess && bootstrap){
+		printf("Third\n");
 		//TODO: clean worldCoordinate
 		CvPoint3D32f worldCoordinate;
 		int headRefX,headRefY,lastHeadW,lastHeadH;
@@ -1104,6 +1123,7 @@ void update6dof(int headHeight, int headWidth,int initialGuess,int numberOfTrack
 	if( numberOfTrackingPoints > 0 )
 	{
 		if(mode ==EHCI6DFACEDETECTKEYFRAME && generatedImage){
+			printf("Second\n");
 			//should make optical flow from generated image
 			//printf("Enabling\n");
 			bootstrap=1;
@@ -1115,7 +1135,7 @@ void update6dof(int headHeight, int headWidth,int initialGuess,int numberOfTrack
 			//need to rotate,translate points here
 
 			cvCalcOpticalFlowPyrLK( prev_grey, grey, prev_pyramid, pyramid,
-					points[0], points[1], numberOfTrackingPoints, cvSize(win_size,win_size), 3, status, 0,
+					points[0], points[1], numberOfTrackingPoints, cvSize(20,20), 3, status, 0,
 					cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS,20,0.03), flags );
 			cvShowImage("PrevGrey",prev_grey);
 			cvShowImage("Grey",grey);
@@ -1137,6 +1157,7 @@ void update6dof(int headHeight, int headWidth,int initialGuess,int numberOfTrack
 			numberOfTrackingPoints = k;
 		}
 		else{
+			printf("First\n");
 			cvCalcOpticalFlowPyrLK( prev_grey, grey, prev_pyramid, pyramid,
 					points[0], points[1], numberOfTrackingPoints, cvSize(win_size,win_size), 3, status, 0,
 					cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS,20,0.03), flags );
@@ -1166,13 +1187,16 @@ void update6dof(int headHeight, int headWidth,int initialGuess,int numberOfTrack
 	CvMatr32f rotation_matrix = new float[9];
 	CvVect32f translation_vector = new float[3];
 
-
+	int newNumberOfPoints=numberOfTrackingPoints;
 
 	if(numberOfTrackingPoints >=NUMPTS){
 		//getPositMatrix uses points[1] obtained from cvCalcOpticalFlowPyrLK
+		//if ransac is used, some points will be discarded and numberOfTrackinPoints is changed
+
 		getPositMatrix(image,initialGuess, rotation_matrix,translation_vector,
 				numberOfTrackingPoints,EHCIFOCUS,points[1],upperHeadCorner,
-				headWidth,headHeight,EHCIMODELSCALE);
+				headWidth,headHeight,EHCIMODELSCALE,&newNumberOfPoints);
+		printf("Old %d New %d\n",numberOfTrackingPoints,newNumberOfPoints);
 		updateGlPositMatrix(rotation_matrix,translation_vector);
 
 	}
@@ -1181,6 +1205,7 @@ void update6dof(int headHeight, int headWidth,int initialGuess,int numberOfTrack
 	CV_SWAP( prev_grey, grey, swap_temp );
 	CV_SWAP( prev_pyramid, pyramid, swap_temp );
 	CV_SWAP( points[0], points[1], swap_points );
+	return newNumberOfPoints;
 
 }
 
@@ -1373,6 +1398,7 @@ int ehciLoop(int mode,int initialGuess){
 
 	//main cvLoop, used to process events
 	cvWaitKey(5);
+	//cvWaitKey(0);
 
 	if(initialGuess){
 		//automatic initialization won't work in case face was not detected
@@ -1445,21 +1471,26 @@ int ehciLoop(int mode,int initialGuess){
 
 	}
 
-
+	int newNumberOfTrackingPoints=0;
 	if(initialGuess) { printf("Disabling\n");bootstrap=0;generatedImage=NULL;}
 	if((mode & EHCI6DFACEDETECT) || (mode & EHCI6DHANDDETECT)){
-		update6dof(headHeight, headWidth, initialGuess,numberOfTrackingPoints,mode);
+		//numberOfTrackingPoints = update6dof(headHeight, headWidth, initialGuess,numberOfTrackingPoints,mode);
+		newNumberOfTrackingPoints = update6dof(headHeight, headWidth, initialGuess,numberOfTrackingPoints,mode);
 	}
 	else if (mode == EHCI6DFACEDETECTKEYFRAME){
-		update6dof(headHeight, headWidth, initialGuess,numberOfTrackingPoints,mode);
+		//numberOfTrackingPoints = update6dof(headHeight, headWidth, initialGuess,numberOfTrackingPoints,mode);
+		newNumberOfTrackingPoints = update6dof(headHeight, headWidth, initialGuess,numberOfTrackingPoints,mode);
 	}
+
 
 	cvShowImage( "EHCI Window", image );
 
 	if(numberOfTrackingPoints<NUMPTS)
 		return 0;
-	else
+	else{
+		numberOfTrackingPoints = newNumberOfTrackingPoints;
 		return 1;
+	}
 }
 
 

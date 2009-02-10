@@ -295,16 +295,16 @@ void drawSinusoidalHead(float scale, int headWidth, int headHeight, int myRefX,i
 		glColor3f(1.0f,1.0f,1.0f);
 
 		glTexCoord2f( x, 0);
-		glVertex3f(0 +x - deltaX, +0.0 - deltaY,sin((+x)*3.141593) -deltaZ);//0-deltaZ);//sin((+x)*3.141593) -deltaZ);
+		glVertex3f(0 +x - deltaX, +0.0 - deltaY,.5*sin((+x)*3.141593) -deltaZ);//0-deltaZ);//sin((+x)*3.141593) -deltaZ);
 
 		glTexCoord2f( x, 1.0);
-		glVertex3f(0 +x - deltaX, -1.0 - deltaY,sin((+x)*3.141593) -deltaZ);//0-deltaZ);//sin((+x)*3.141593) -deltaZ);
+		glVertex3f(0 +x - deltaX, -1.0 - deltaY,.5*sin((+x)*3.141593) -deltaZ);//0-deltaZ);//sin((+x)*3.141593) -deltaZ);
 
 		glTexCoord2f( x+xIncrement, 1.0);
-		glVertex3f(0 +x+xIncrement - deltaX, -1.0 - deltaY,sin((+x+xIncrement)*3.141593) -deltaZ);//0-deltaZ);//sin((+x+xIncrement)*3.141593) -deltaZ);
+		glVertex3f(0 +x+xIncrement - deltaX, -1.0 - deltaY,.5*sin((+x+xIncrement)*3.141593) -deltaZ);//0-deltaZ);//sin((+x+xIncrement)*3.141593) -deltaZ);
 
 		glTexCoord2f( x+xIncrement, 0.0);
-		glVertex3f(0 +x+xIncrement - deltaX, 0.0 - deltaY,sin((+x+xIncrement)*3.141593) -deltaZ);//0-deltaZ);//sin((+x+xIncrement)*3.141593) -deltaZ);
+		glVertex3f(0 +x+xIncrement - deltaX, 0.0 - deltaY,.5*sin((+x+xIncrement)*3.141593) -deltaZ);//0-deltaZ);//sin((+x+xIncrement)*3.141593) -deltaZ);
 
 		glEnd();
 	}
@@ -632,13 +632,13 @@ void DrawGLScene(void)
 	double glPositMatrix[16];
 	//cvWaitKey(0);
 	int detected=0;
-	if(generatedImage){
+	/*if(generatedImage){
 		detected = ehciLoop(EHCI6DFACEDETECTKEYFRAME,initialGuess,generatedImage);
 	}
 	else{
 		detected= ehciLoop(EHCI6DFACEDETECTKEYFRAME,initialGuess);
-	}
-	//detected= ehciLoop(EHCI6DFACEDETECT,initialGuess);
+	}*/
+	detected= ehciLoop(EHCI6DFACEDETECT,initialGuess);
 
 	keyframeRelated();
 
