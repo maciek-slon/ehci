@@ -825,8 +825,8 @@ void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matri
 			//printf("Ip %f %f\n", point2D.x, point2D.y);
 
 		}
-		else  if(numOfTrackingPoints==modelPoints.size()){
-			//else  if(numOfTrackingPoints==modelPoints.size()){
+		else {
+			//was: else  if(numOfTrackingPoints==modelPoints.size()){
 			addPointCenteredReference(imagePoints,points[i]);
 			//printf("Ip %f %f\n", point2D.x, point2D.y);
 
@@ -839,8 +839,9 @@ void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matri
 	}
 
 
-	if(modelPoints.size()==numOfTrackingPoints){
-		printf("Updating\n");
+	//was: if(modelPoints.size()==numOfTrackingPoints){
+	if(modelPoints.size()>0){
+		//printf("Updating\n");
 		if(USE_RANSAC){
 			int inliersNumber;
 			ransac(imagePoints,modelPoints,rotation_matrix, translation_vector,focus,myImage,points,&inliersNumber);
@@ -1137,8 +1138,8 @@ int update6dof(int headHeight, int headWidth,int initialGuess,int numberOfTracki
 			cvCalcOpticalFlowPyrLK( prev_grey, grey, prev_pyramid, pyramid,
 					points[0], points[1], numberOfTrackingPoints, cvSize(20,20), 3, status, 0,
 					cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS,20,0.03), flags );
-			cvShowImage("PrevGrey",prev_grey);
-			cvShowImage("Grey",grey);
+			//cvShowImage("PrevGrey",prev_grey);
+			//cvShowImage("Grey",grey);
 
 			flags |= CV_LKFLOW_PYR_A_READY;
 			for( i = k = 0; i < numberOfTrackingPoints; i++ )
@@ -1157,12 +1158,12 @@ int update6dof(int headHeight, int headWidth,int initialGuess,int numberOfTracki
 			numberOfTrackingPoints = k;
 		}
 		else{
-			printf("First\n");
+			//printf("First\n");
 			cvCalcOpticalFlowPyrLK( prev_grey, grey, prev_pyramid, pyramid,
 					points[0], points[1], numberOfTrackingPoints, cvSize(win_size,win_size), 3, status, 0,
 					cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS,20,0.03), flags );
-			cvShowImage("PrevGrey",prev_grey);
-			cvShowImage("Grey",grey);
+			//cvShowImage("PrevGrey",prev_grey);
+			//cvShowImage("Grey",grey);
 
 			flags |= CV_LKFLOW_PYR_A_READY;
 			for( i = k = 0; i < numberOfTrackingPoints; i++ )
@@ -1196,7 +1197,7 @@ int update6dof(int headHeight, int headWidth,int initialGuess,int numberOfTracki
 		getPositMatrix(image,initialGuess, rotation_matrix,translation_vector,
 				numberOfTrackingPoints,EHCIFOCUS,points[1],upperHeadCorner,
 				headWidth,headHeight,EHCIMODELSCALE,&newNumberOfPoints);
-		printf("Old %d New %d\n",numberOfTrackingPoints,newNumberOfPoints);
+		//printf("Old %d New %d\n",numberOfTrackingPoints,newNumberOfPoints);
 		updateGlPositMatrix(rotation_matrix,translation_vector);
 
 	}
@@ -1320,9 +1321,9 @@ void readParameters(){
  */
 
 void ehciInit(){
-	cvNamedWindow( "EHCI Window", CV_WINDOW_AUTOSIZE );
-	cvNamedWindow( "PrevGrey", CV_WINDOW_AUTOSIZE );
-	cvNamedWindow( "Grey", CV_WINDOW_AUTOSIZE );
+	cvNamedWindow( "EHCI Window", 0);//CV_WINDOW_AUTOSIZE );
+	//cvNamedWindow( "PrevGrey", CV_WINDOW_AUTOSIZE );
+	//cvNamedWindow( "Grey", CV_WINDOW_AUTOSIZE );
 
 	readParameters();
 

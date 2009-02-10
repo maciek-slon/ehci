@@ -596,7 +596,6 @@ IplImage* generatedImage = NULL;
 char *data=NULL;
 
 void generateTexture(){
-
 	int dataPtr=640*480*3-1;
 	if(data==NULL)
 		data = (char*) malloc(640*480*3);
