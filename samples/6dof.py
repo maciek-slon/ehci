@@ -38,9 +38,9 @@ def SpinCameraTask(task,hist=[],yhist=[],frame=[]):
   mat = ehci.getGlPositMatrix()
   print "After"
 #  u,v,w,x = ehci.getHeadBounds()
-  u = mat[12]
-  v = mat[13]
-  w = mat[14]
+  u = 50*mat[12]
+  v = 50*mat[13]
+  w = 50*mat[14]
   angle=math.atan2(-mat[2],mat[0])
   print "Ang ",angle
   if(u>0):
@@ -50,9 +50,9 @@ def SpinCameraTask(task,hist=[],yhist=[],frame=[]):
   angledegrees = angleradians * (180.0/ math.pi)
   hist.append(angledegrees)
   #calculate means because of noise
-  if(len(hist)>5): hist.pop(0)
+  if(len(hist)>10): hist.pop(0)
   yhist.append(v)
-  if(len(yhist)>5): yhist.pop(0)
+  if(len(yhist)>10): yhist.pop(0)
   #angle = sum(hist)/len(hist)
   angle = angle * (180.0/math.pi)
   ymean = sum(yhist)/len(yhist)
