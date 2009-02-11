@@ -1,4 +1,4 @@
-AM_CPPFLAGS = -I /usr/local/include/opencv/ 
+AM_CPPFLAGS = $(OPENCV_CFLAGS)
 
 lib_LTLIBRARIES = libehci.la
 libehci_la_SOURCES = ehci.cpp ehci.h

@@ -44,7 +44,9 @@ int detect_and_draw( IplImage* small_img, int mode,double scale, CvPoint* upperH
 		double t = (double)cvGetTickCount();
 		CvSeq* faces = cvHaarDetectObjects( small_img, cascade, storage,
 				1.2, 2, 0
+#ifdef CV_HAAR_FIND_BIGGEST_OBJECT
 				|CV_HAAR_FIND_BIGGEST_OBJECT
+#endif
 				//|CV_HAAR_DO_ROUGH_SEARCH
 				//|CV_HAAR_DO_CANNY_PRUNING
 				//|CV_HAAR_SCALE_IMAGE
