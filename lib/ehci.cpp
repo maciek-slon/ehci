@@ -1,8 +1,8 @@
 #include "ehci.h"
 using namespace std;
 
-
-
+IplImage *image = 0;
+vector<int> ransacDeleted;
 
 
 
@@ -436,6 +436,7 @@ double plot2dModel(CvMatr32f rotation_matrix,CvVect32f translation_vector,
 	CvMat Mp = cvMat(4, 4, CV_32FC1, projectionMatrix);
 
 	int NUMPTS = objectPoints.size();
+	//printf("Plot2d receiving %d\n",NUMPTS);
 	int w;
 	CvMat Mpoints[500];
 	float pontos[500][4];
@@ -709,8 +710,20 @@ int ransac( vector<CvPoint2D32f> imagePoints, vector<CvPoint3D32f> objectPoints,
 			bestSize = inliers.size();
 			//minDist = distance;
 			bestSet.clear();
+			ransacDeleted.clear();
+			int dCount = 0;
 			for(int i=0;i<inliers.size();i++){
+				if(dCount != inliers[i]){
+					ransacDeleted.push_back(dCount);
+					dCount++;
+				}
+
 				bestSet.push_back(inliers[i]);
+				dCount++;
+			}
+			while(dCount <imagePoints.size()){
+				ransacDeleted.push_back(dCount);
+				dCount++;
 			}
 		}
 	}
@@ -720,14 +733,22 @@ int ransac( vector<CvPoint2D32f> imagePoints, vector<CvPoint3D32f> objectPoints,
 
 	//update corrected points
 	*numberOfInliers = bestSet.size();
-	printf("Trying to update points\n");
+	//printf("Old %d New %d\n",imagePoints.size(),bestSet.size());
+	//printf("Trying to update points\n");
 	for(int i=0;i<bestSet.size();i++){
-		if(i==0) printf("Updated points\n");
+		//TODO: check if this is necessary
+	//	if(i==0) printf("Updated points\n");
 		CvPoint2D32f centeredPoint =imagePoints[bestSet[i]];
 		centeredPoint.x +=320;
 		centeredPoint.y +=240;
 		correctedPoints[i] = centeredPoint;
 	}
+	//printf("Deleted %d\n",ransacDeleted.size());
+	for(int i=0;i<ransacDeleted.size();i++){
+		CvPoint2D32f centeredPoint = imagePoints[ransacDeleted[i]];
+		cvCircle( image,cvPoint(centeredPoint.x+320,centeredPoint.y+240) , 4, CV_RGB(200,200,0), 2, 8,0);
+	}
+
 
 
 	//generate rot and trans matrixes with best inliers
@@ -782,11 +803,48 @@ void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matri
 
 	std::vector<CvPoint2D32f> imagePoints;
 
+	//will need to rebuild the model either way because of ransac
 	if(initialGuess){
 		modelPoints.clear();
 	}
 
 	//setInitialRTMatrix();
+	int ransacInAction = numOfTrackingPoints < modelPoints.size();
+	//printf("Posit receiving %d points. RansacInAction? %d\n",numOfTrackingPoints,ransacInAction);
+
+	if(ransacInAction){
+		//it seems ransac has removed some outliers
+		//we need to remove modelPoints that don't fit anymore
+		printf("Ransac in action: updating modelPoints\n");
+		int tCount = 0;
+		int target = ransacDeleted[tCount];
+
+		std::vector<CvPoint3D32f> updatedModelPoints;
+
+		for(int i=0;i<modelPoints.size();i++){
+			if(i==target){
+				printf("Erasing %d\n",i);
+				//skip this
+
+				//update target
+				if(tCount<ransacDeleted.size()-1)
+					target = ransacDeleted[++tCount];
+
+			}
+			else{
+				updatedModelPoints.push_back(modelPoints[i]);
+			}
+		}
+		printf("Old size %d new size %d\n",modelPoints.size(),updatedModelPoints.size());
+		modelPoints.clear();
+		for(int i=0;i<updatedModelPoints.size();i++){
+			modelPoints.push_back(updatedModelPoints[i]);
+		}
+
+
+
+
+	}
 
 	for(int i=0;i<numOfTrackingPoints;i++){
 		float myPixel[4];
@@ -794,9 +852,11 @@ void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matri
 		int px = cvPointFrom32f(points[i]).x - upperHeadCorner.x ;
 		int py = cvPointFrom32f(points[i]).y - upperHeadCorner.y ;
 
+		cvCircle( image, cvPointFrom32f(points[i]), 3, CV_RGB(0,0,200), 0, 8,0);
+
 		//glReadPixels(px,480-py,1,1,GL_RGBA,GL_FLOAT,&myPixel);
 
-
+		//will need to rebuild the model either way because of ransac
 		if(initialGuess){
 			//printf("initial guessing\n");
 			float fx,fy,fz;
@@ -950,7 +1010,7 @@ void setGLProjectionMatrix(double projectionMatrix[16]){
 #define READFROMIMAGEFILE 0
 #define NUMPTS 8
 
-IplImage *image = 0, *grey = 0, *prev_grey = 0, *pyramid = 0, *prev_pyramid = 0, *swap_temp;
+IplImage *grey = 0, *prev_grey = 0, *pyramid = 0, *prev_pyramid = 0, *swap_temp;
 const int MAX_COUNT = 500;
 CvPoint2D32f* points[2] = {0,0}, *swap_points;
 char* status = 0;
@@ -1120,7 +1180,7 @@ int update6dof(int headHeight, int headWidth,int initialGuess,int numberOfTracki
 		getKeyFrameHeadPoints(&headRefX,&headRefY,&lastHeadW,&lastHeadH);
 		texture2world(&worldCoordinate,lastHeadW,lastHeadH,headRefX,
 				headRefY, numberOfTrackingPoints,points[0], image);
-		//printf("Modifying points!\n");
+		printf("Modifying points!\n");
 	}
 
 	if( numberOfTrackingPoints > 0 )
@@ -1176,11 +1236,14 @@ int update6dof(int headHeight, int headWidth,int initialGuess,int numberOfTracki
 
 				points[1][k++] = points[1][i];
 				//draws points on image for debugging
-				cvCircle( image, cvPointFrom32f(points[1][i]), 4, CV_RGB(0,0,0), 0, 8,0);
-				cvCircle( image, cvPointFrom32f(points[1][i]), 3, CV_RGB(200,0,0), 0, 8,0);
+				//cvCircle( image, cvPointFrom32f(points[1][i]), 4, CV_RGB(0,0,0), 0, 8,0);
+				///cvCircle( image, cvPointFrom32f(points[1][i]), 3, CV_RGB(200,0,0), 0, 8,0);
+				cvLine(image,cvPointFrom32f(points[0][i]),cvPointFrom32f(points[1][i]),CV_RGB(200,0,0),1);
+
 
 
 			}
+			//cvWaitKey(0);
 			numberOfTrackingPoints = k;
 		}
 	}
@@ -1323,7 +1386,7 @@ void readParameters(){
  */
 
 void ehciInit(){
-	cvNamedWindow( "EHCI Window", 0);//CV_WINDOW_AUTOSIZE );
+	cvNamedWindow( "EHCI Window", CV_WINDOW_AUTOSIZE );
 	//cvNamedWindow( "PrevGrey", CV_WINDOW_AUTOSIZE );
 	//cvNamedWindow( "Grey", CV_WINDOW_AUTOSIZE );
 
