@@ -49,7 +49,7 @@ AM_CONDITIONAL(PYEHCI, test x$pyehci = xtrue)
 #is not automatically checked for installed libraries
 export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/usr/local/lib/pkgconfig"
 
-PKG_CHECK_MODULES(OPENCV, opencv >= 1.1.0)
+PKG_CHECK_MODULES(OPENCV, opencv >= 1.0.0)
 
 
 AC_SUBST(OPENCV_CFLAGS)
