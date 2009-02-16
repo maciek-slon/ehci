@@ -386,6 +386,8 @@ double getDistanceThreshold(CvMat Ma,CvMat Mp,CvMat* Mpoints,CvMat Mlook,int NUM
 }
 //returns the inliers indexes in the inliers vector
 //returns the sum of the distances
+//in case keyframe is using this function, it plots original 2d keyframe points to new
+//positions using current matrixes
 double plot2dModel(CvMatr32f rotation_matrix,CvVect32f translation_vector,
 		vector<CvPoint3D32f> objectPoints,IplImage *image,vector<CvPoint2D32f> imagePoints,vector<int>* inliers, int flag,CvPoint2D32f* correctedPoints ){
 	if(objectPoints.size()==0) return 100000000.0;
@@ -584,6 +586,9 @@ double plot2dModel(CvMatr32f rotation_matrix,CvVect32f translation_vector,
 			//cvRectangle(image,cvPoint(0,0),cvPoint(160,120),CV_RGB(0,150,0),2,0,0);
 			if(flag){
 				cvCircle( image,cvPoint(xWinPosition+320,-yWinPosition+240), w==0?4:1, CV_RGB(0,0,200) , -1, 8,0);
+				if(pointDistance>RANSAC_DISTANCE_THRESHOLD){
+					cvCircle( image,cvPoint(xWinPosition+320,-yWinPosition+240), 3, CV_RGB(180,36,255) , -1, 8,0);
+				}
 				correctedPoints[w]= cvPoint2D32f(xWinPosition+320,-yWinPosition+240);
 
 				if(w>=NUMPTS){
@@ -745,6 +750,7 @@ int ransac( vector<CvPoint2D32f> imagePoints, vector<CvPoint3D32f> objectPoints,
 	}
 	//printf("Deleted %d\n",ransacDeleted.size());
 	for(int i=0;i<ransacDeleted.size();i++){
+		printf("ehci: Deleted %d\n",ransacDeleted[i]);
 		CvPoint2D32f centeredPoint = imagePoints[ransacDeleted[i]];
 		cvCircle( image,cvPoint(centeredPoint.x+320,centeredPoint.y+240) , 4, CV_RGB(200,200,0), 2, 8,0);
 	}
@@ -812,10 +818,11 @@ void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rotation_matri
 	int ransacInAction = numOfTrackingPoints < modelPoints.size();
 	//printf("Posit receiving %d points. RansacInAction? %d\n",numOfTrackingPoints,ransacInAction);
 
-	if(ransacInAction){
+	if(ransacInAction && (ransacDeleted.size()>0)){
 		//it seems ransac has removed some outliers
 		//we need to remove modelPoints that don't fit anymore
-		printf("Ransac in action: updating modelPoints\n");
+		printf("Ransac in action: updating modelPoints tp %d mp %d\n",
+				numOfTrackingPoints,modelPoints.size());
 		int tCount = 0;
 		int target = ransacDeleted[tCount];
 
@@ -1102,6 +1109,7 @@ void texture2world( CvPoint3D32f* worldCoordinate, int headWidth, int headHeight
 	vector<int> inliers;
 	//TODO: refactor plot2dModel so that ransac and this function can use it differently
 	plot2dModel(rotationMatrix ,translationVector,modelPoints,myImage,vectorPoints,&inliers,1,points);
+	printf("Keyframe original %d inliers %d\n",modelPoints.size(),inliers.size());
 
 /*
 	float a[] = {  rotation_matrix[0],  rotation_matrix[1],  rotation_matrix[2], translation_vector[0],
@@ -1173,20 +1181,20 @@ int update6dof(int headHeight, int headWidth,int initialGuess,int numberOfTracki
 	int i,k;
 
 	if(mode == EHCI6DFACEDETECTKEYFRAME && bootstrap){//generatedImage && !initialGuess && bootstrap){
-		printf("Third\n");
+		//printf("Third\n");
 		//TODO: clean worldCoordinate
 		CvPoint3D32f worldCoordinate;
 		int headRefX,headRefY,lastHeadW,lastHeadH;
 		getKeyFrameHeadPoints(&headRefX,&headRefY,&lastHeadW,&lastHeadH);
 		texture2world(&worldCoordinate,lastHeadW,lastHeadH,headRefX,
 				headRefY, numberOfTrackingPoints,points[0], image);
-		printf("Modifying points!\n");
+		//printf("Modifying points!\n");
 	}
 
 	if( numberOfTrackingPoints > 0 )
 	{
 		if(mode ==EHCI6DFACEDETECTKEYFRAME && generatedImage){
-			printf("Second\n");
+			//printf("Second\n");
 			//should make optical flow from generated image
 			//printf("Enabling\n");
 			bootstrap=1;
@@ -1234,10 +1242,20 @@ int update6dof(int headHeight, int headWidth,int initialGuess,int numberOfTracki
 				if( !status[i] )
 					continue;
 
-				points[1][k++] = points[1][i];
+
 				//draws points on image for debugging
 				//cvCircle( image, cvPointFrom32f(points[1][i]), 4, CV_RGB(0,0,0), 0, 8,0);
 				///cvCircle( image, cvPointFrom32f(points[1][i]), 3, CV_RGB(200,0,0), 0, 8,0);
+
+				/*double dx = cvPointFrom32f(points[1][i]).x - cvPointFrom32f(points[0][i]).x;
+				double dy = cvPointFrom32f(points[1][i]).y - cvPointFrom32f(points[0][i]).y;
+				double dist = dx*dx + dy*dy;
+
+				if(sqrt(dist)>20)
+					continue;*/
+
+				points[1][k++] = points[1][i];
+
 				cvLine(image,cvPointFrom32f(points[0][i]),cvPointFrom32f(points[1][i]),CV_RGB(200,0,0),1);
 
 
@@ -1397,6 +1415,12 @@ void ehciInit(){
 
 
 int ehciLoop(int mode,int initialGuess){
+
+	//main cvLoop, used to process events
+	//cvWaitKey(5);
+	cvWaitKey(0);
+
+
 	static int numberOfTrackingPoints=0;
 	int i, k, c;
 	int headWidth, headHeight,detectedHead=0;
@@ -1420,6 +1444,9 @@ int ehciLoop(int mode,int initialGuess){
 
 		if( !frame ){
 			//TODO: in case it's a movie, it needs to finish here
+			printf("Couldn't grab frame\n");
+			exit(0);
+			//return 0;
 			//exit(0);
 			//TODO: loop movie... isn't safe... correct this
 			capture=0;
@@ -1461,10 +1488,6 @@ int ehciLoop(int mode,int initialGuess){
 	updateInternalHeadPosition(upperHeadCorner.x,upperHeadCorner.y,
 			headWidth,headHeight);
 
-
-	//main cvLoop, used to process events
-	cvWaitKey(5);
-	//cvWaitKey(0);
 
 	if(initialGuess){
 		//automatic initialization won't work in case face was not detected

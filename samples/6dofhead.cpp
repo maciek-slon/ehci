@@ -34,8 +34,8 @@ int window;
 double projectionMatrix[16];
 
 
-int initialGuess=0;
-int drawSine=1,drawHead=0,drawAxis=0,drawNormals=0,blending=0,drawLight=1,drawBackground=1;
+int initialGuess=1;
+int drawSine=0,drawHead=1,drawAxis=1,drawNormals=0,blending=1,drawLight=1,drawBackground=1;
 int aLastHeadW, aLastHeadH;
 int headRefX,headRefY;
 
@@ -631,13 +631,13 @@ void DrawGLScene(void)
 	double glPositMatrix[16];
 	//cvWaitKey(0);
 	int detected=0;
-	/*if(generatedImage){
+	if(generatedImage){
 		detected = ehciLoop(EHCI6DFACEDETECTKEYFRAME,initialGuess,generatedImage);
 	}
 	else{
 		detected= ehciLoop(EHCI6DFACEDETECTKEYFRAME,initialGuess);
-	}*/
-	detected= ehciLoop(EHCI6DFACEDETECT,initialGuess);
+	}
+	//detected= ehciLoop(EHCI6DFACEDETECT,initialGuess);
 
 	keyframeRelated();
 
@@ -734,7 +734,7 @@ void DrawGLScene(void)
 		}
 
 		if(drawHead)
-			drawHeadModel(1.6f/5.0f,aLastHeadW,aLastHeadH,headRefX,headRefY);
+			drawHeadModel(1.4f/5.0f,aLastHeadW,aLastHeadH,headRefX,headRefY);
 
 		//glTranslatef(200.0,0,0.0f);
 		//glutWireSphere(80.0, 200, 200);

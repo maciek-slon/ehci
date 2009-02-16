@@ -6,7 +6,7 @@
 #include <vector>
 //..
 //opengl related includes
-#include <GL/glut.h>    // Header File For The GLUT Library 
+#include <GL/glut.h>    // Header File For The GLUT Library
 #include <GL/gl.h>	// Header File For The OpenGL32 Library
 #include <GL/glu.h>	// Header File For The GLu32 Library
 #include <GL/freeglut.h>
@@ -28,7 +28,7 @@ GLfloat LightPosition[] = { 0.0f, 0.0f, 500.0f, 1.0f };
 
 
 /* The number of our GLUT window */
-int window;  
+int window;
 
 CvCapture* capture = 0;
 
@@ -50,18 +50,18 @@ triangle triangles[3036];
 
 void drawHelpText(){
 	int* font = (int*)GLUT_BITMAP_HELVETICA_10;
-	
+
 	int XSize = 640, YSize = 480;
 	glMatrixMode (GL_PROJECTION);
 	glLoadIdentity ();
-	
+
 	glOrtho (0, XSize, YSize, 0, 0, 1);
 	glMatrixMode (GL_MODELVIEW);
 	glLoadIdentity ();
-	
+
 
 	glColor3f(255.0f,255.0f,255.0f);
-	
+
 	glRasterPos2f(10, 20);
 	const unsigned char text[] ="Press I to reinitialize";
 	glutBitmapString(font, text);
@@ -72,26 +72,26 @@ void drawReferenceAxis(){
 	glBegin(GL_LINES);
 	glColor3f(1.0f,0.0f,0.0);
 	glVertex3f( 0.0f,0.0f,0.0f);
-	glVertex3f( 1000.0f,0.0f,0.0f);	
+	glVertex3f( 1000.0f,0.0f,0.0f);
 	glEnd();
 
 
 	glBegin(GL_LINES);
 	glColor3f(0.0f,1.0f,0.0);
 	glVertex3f(0.0f, 0.0f,0.0f);
-	glVertex3f(0.0f, 1000.0f,0.0f);	
+	glVertex3f(0.0f, 1000.0f,0.0f);
 	glEnd();
 
 	glBegin(GL_LINES);
 	glColor3f(0.0f,1.0f,0.0);
 	glVertex3f(100.0f, 0.0f,0.0f);
-	glVertex3f(100.0f, 1000.0f,0.0f);	
+	glVertex3f(100.0f, 1000.0f,0.0f);
 	glEnd();
 
 	glBegin(GL_LINES);
 	glColor3f(0.0f,0.0f,1.0);
 	glVertex3f( 0.0f,0.0f,0.0f);
-	glVertex3f( 0.0f,0.0f,1000.0f);	
+	glVertex3f( 0.0f,0.0f,1000.0f);
 	glEnd();
 
 }
@@ -132,7 +132,7 @@ void loadRaw(char* file){
 
 void drawSinusoidalHead(float scale,int headWidth,int headHeight, int myRefX,int myRefY){
 	for(int i=0;i<headWidth;i+=8){
-			float fx = (1.6667 * i/(float)headWidth) - 0.332;			
+			float fx = (1.6667 * i/(float)headWidth) - 0.332;
 			float fy = 0;
 			float fz = sin(fx*3.141593);
 			float deltaX = -((1.6667 * myRefX/(1.0*headWidth)) - 0.332)*scale;
@@ -142,23 +142,23 @@ void drawSinusoidalHead(float scale,int headWidth,int headHeight, int myRefX,int
 			glBegin(GL_LINES);
 			glColor3f(0.0f,1.0f,0.0);
 			glVertex3f(fx*scale+deltaX, +0.332*scale   -deltaY, fz*scale+deltaZ);
-			glVertex3f(fx*scale+deltaX, -1.3347*scale  -deltaY, fz*scale+deltaZ);	
+			glVertex3f(fx*scale+deltaX, -1.3347*scale  -deltaY, fz*scale+deltaZ);
 			glEnd();
 
 	}
 }
 
 void drawHeadModel(float scale,int headWidth,int headHeight, int myRefX,int myRefY){
-		
-	float deltaX = -(myRefX/(float)headWidth*5.0-2.5);	
+
+	float deltaX = -(myRefX/(float)headWidth*5.0-2.5);
 	float deltaY = myRefY/(float)headHeight*7.5-3.75;
 	float deltaZ = -4.0f * cos(deltaX/2.5*3.141593);
-	
+
 
 
 	for(int i=0;i<3036;i++){
 		//glColor3f (i/3036.0, 0.0, 0.0);
-		
+
 
 		float v1x = triangles[i].vert[1][0] - triangles[i].vert[0][0];
 		float v1y = triangles[i].vert[1][1] - triangles[i].vert[0][1];
@@ -171,7 +171,7 @@ void drawHeadModel(float scale,int headWidth,int headHeight, int myRefX,int myRe
 		float nx = 5*(v1y*v2z-v2y*v1z);
 		float ny = 5*(v1z*v2x-v2z*v1x);
 		float nz = 5*(v1x*v2y-v2x*v1y);
-		
+
 	    // calculate the length of the vector
 	    float len = (float)(sqrt((nx * nx) + (ny * ny) + (nz * nz)));
 
@@ -184,27 +184,27 @@ void drawHeadModel(float scale,int headWidth,int headHeight, int myRefX,int myRe
 	    ny /= len;
 	    nz /= len;
 
-		
+
 		glNormal3f( nx,ny,nz);
-		
+
 		if(drawNormals){
 			glBegin(GL_LINES);
 				glColor3f(1.0f,0.0f,0.0);
-				
+
 				glVertex3f(	scale* (triangles[i].vert[0][0]+deltaX),
 							scale* (triangles[i].vert[0][1]+deltaY),
 							scale* (triangles[i].vert[0][2]+deltaZ));
-				
+
 				glVertex3f(	scale* (triangles[i].vert[0][0]+deltaX+nx),
 							scale* (triangles[i].vert[0][1]+deltaY+ny),
-							scale* (triangles[i].vert[0][2]+deltaZ+nz));			
-		
+							scale* (triangles[i].vert[0][2]+deltaZ+nz));
+
 			glEnd();
 		}
-		
+
 		glBegin(GL_TRIANGLES);
 		glColor3d (0.0, 0.0, 1.0);
-		
+
 		for(int j=0;j<3;j++){
 			glVertex3f(	scale* (triangles[i].vert[j][0]+deltaX),
 						scale* (triangles[i].vert[j][1]+deltaY),
@@ -221,35 +221,35 @@ void drawHeadModel(float scale,int headWidth,int headHeight, int myRefX,int myRe
 
 /* The main drawing function. */
 void DrawGLScene(void)
-{  
+{
 
 	CvMatr32f rotation_matrix = new float[9];
 	CvVect32f translation_vector = new float[3];
 	double glPositMatrix[16];
 	int detected = cvLoop(glPositMatrix,initialGuess,MYFOCUS,MODELSCALE,capture,
 			&headRefX,&headRefY,&aLastHeadW, &aLastHeadH);
-	
+
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glLoadIdentity();
-	
-	
-	
-	
-	
-	
+
+
+
+
+
+
 
 	if(initialGuess){
 		setInitialRTMatrix(rotation_matrix,translation_vector);
-		updateGlPositMatrix(rotation_matrix,translation_vector,glPositMatrix);	
+		updateGlPositMatrix(rotation_matrix,translation_vector,glPositMatrix);
 	}
-	
 
-	if(initialGuess){		
+
+	if(initialGuess){
 		//TODO: get points from orthogonal view
 		/*
 		glMatrixMode( GL_MODELVIEW );
-		glLoadIdentity();		
+		glLoadIdentity();
 
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
@@ -275,38 +275,38 @@ void DrawGLScene(void)
 		glEnd();*/
 	}
 	else{
-		
+
 		//loads reference point pose into OpenGL modelview matrix
-		
+
 
 		glMatrixMode(GL_PROJECTION);
 		glLoadMatrixd( projectionMatrix );
 
 		//look in +z direction, the same as POSIT
 		gluLookAt(0, 0, 0 , 0, 0, +1.0, 0, -1, 0);
-		
+
 		glMatrixMode( GL_MODELVIEW );
 		glLoadMatrixd( glPositMatrix );
-		
+
 		glLightfv(GL_LIGHT1, GL_POSITION,LightPosition); // set light position.
 
 
 
 		if(drawAxis)
 			drawReferenceAxis();
-		
+
 		if(drawSine)
 			drawSinusoidalHead(MODELSCALE,aLastHeadW,aLastHeadH,headRefX,headRefY);
-		
-		//scale should be the same as Sinusoidal, but the head 
+
+		//scale should be the same as Sinusoidal, but the head
 		//is 5 units wide, so it's 5 times lower
 		drawHeadModel(1.6*MODELSCALE/5.0f,aLastHeadW,aLastHeadH,headRefX,headRefY);
-		
+
 		//glLoadIdentity();
 		//glTranslatef(200.0,0,0.0f);
 		//glutWireSphere(80.0, 200, 200);
 	}
-	
+
 	drawHelpText();
 
 	glutSwapBuffers();
@@ -333,15 +333,15 @@ void ReSizeGLScene(GLsizei Width, GLsizei Height)
 }
 
 /* The function called whenever a normal key is pressed. */
-void keyPressed(unsigned char key, int x, int y) 
+void keyPressed(unsigned char key, int x, int y)
 {
 
-	switch (key) {    
+	switch (key) {
 	case 27: // kill everything.
 		/* shut down our window */
-		glutDestroyWindow(window); 
+		glutDestroyWindow(window);
 		/* exit the program...normal termination. */
-		exit(1);                   	
+		exit(1);
 		break; // redundant.
 
 	case 'a':
@@ -356,9 +356,9 @@ void keyPressed(unsigned char key, int x, int y)
 		break;
 	case 'i':
 	case 'I':
-		initialGuess = !initialGuess;		
+		initialGuess = !initialGuess;
 		break;
-	case 76: 
+	case 76:
 	case 108: // switch the lighting.
 		printf("L/l pressed; light is: %d\n", drawLight);
 		drawLight = !drawLight;              // switch the current value of light, between 0 and 1.
@@ -373,7 +373,7 @@ void keyPressed(unsigned char key, int x, int y)
 
 	default:
 		break;
-	}	
+	}
 }
 
 /* A general OpenGL initialization function.  Sets all of the initial parameters. */
@@ -395,7 +395,7 @@ void InitGL(GLsizei Width, GLsizei Height)	// We call this right after our OpenG
 	//float specReflection[] = { 0.8f, 0.8f, 0.8f, 1.0f };
 	//glMaterialfv(GL_FRONT, GL_SPECULAR, specReflection);
 	//glMateriali(GL_FRONT, GL_SHININESS, 96);
-	
+
 	//float mcolor[] = { 1.0f, 0.0f, 0.0f, 1.0f };
 	//glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mcolor);
 
@@ -423,7 +423,7 @@ void InitGL(GLsizei Width, GLsizei Height)	// We call this right after our OpenG
 
 	// set up light number 1.
 	//    glLightfv(GL_LIGHT1, GL_AMBIENT, LightAmbient);  // add lighting. (ambient)
-	
+
 	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, LightAmbient);
 
 	glLightfv(GL_LIGHT1, GL_SPECULAR, LightSpecular);
@@ -435,21 +435,21 @@ void InitGL(GLsizei Width, GLsizei Height)	// We call this right after our OpenG
 
 void openGLCustomInit(int argc, char** argv ){
 
-	glutInit(&argc, argv);  
+	glutInit(&argc, argv);
 
-	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_ALPHA | GLUT_DEPTH);  
+	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_ALPHA | GLUT_DEPTH);
 
 	/* get a 640 x 480 window */
-	glutInitWindowSize(640, 480);  
+	glutInitWindowSize(640, 480);
 
 	/* the window starts at the upper left corner of the screen */
-	glutInitWindowPosition(500, 0);  
+	glutInitWindowPosition(500, 0);
 
-	/* Open a window */  
+	/* Open a window */
 	window = glutCreateWindow("6DOF Head Tracking OpenGL - EHCI - Daniel Lelis Baggio");
 
 	/* Register the function to do all our OpenGL drawing. */
-	glutDisplayFunc(&DrawGLScene);  
+	glutDisplayFunc(&DrawGLScene);
 
 	/* Go fullscreen.  This is as soon as possible. */
 	//    glutFullScreen();
@@ -471,15 +471,15 @@ void openGLCustomInit(int argc, char** argv ){
 	InitGL(640, 480);
 
 
-	/* Start Event Processing Engine */  
-	glutMainLoop();  
+	/* Start Event Processing Engine */
+	glutMainLoop();
 
 }
 
 
 
 int main( int argc, char** argv )
-{	
+{
 
 	char rawFile[]="head.raw";
 	loadRaw(rawFile);
