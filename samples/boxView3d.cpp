@@ -1,4 +1,4 @@
-/* 
+/*
 This code is free software as long as you keep this message in the beginning
 This code uses a classifier with special license. Please look into "haarcascade_frontalface_alt.xml" for more details
 Project homepage: http://code.google.com/p/ehci/
@@ -16,7 +16,7 @@ Project homepage: http://code.google.com/p/ehci/
 #include <time.h>
 #include <ctype.h>
 
-#include <GL/glut.h>    // Header File For The GLUT Library 
+#include <GL/glut.h>    // Header File For The GLUT Library
 #include <GL/gl.h>	// Header File For The OpenGL32 Library
 #include <GL/glu.h>	// Header File For The GLu32 Library
 #include <unistd.h>     // Header file for sleeping.
@@ -37,7 +37,7 @@ static CvHaarClassifierCascade* cascade = 0;
 //this is an approximation, for FOV = 45 degrees, 640x480 pixels
 double horizontalGradesPerPixel = 53.0/640.0;
 double verticalGradesPerPixel = 40.0/480.0;
-double headWidth = 0.12; //supposing head's width is 12 cm 
+double headWidth = 0.12; //supposing head's width is 12 cm
 
 
 /* ascii codes for various special keys */
@@ -50,7 +50,7 @@ double headWidth = 0.12; //supposing head's width is 12 cm
 #define RIGHT_ARROW 77
 
 /* The number of our GLUT window */
-int window; 
+int window;
 
 /* lighting on/off (1 = on, 0 = off) */
 int light;
@@ -62,8 +62,8 @@ int lp;
 int fp;
 
 
-GLfloat xrot;   // x rotation 
-GLfloat yrot;   // y rotation 
+GLfloat xrot;   // x rotation
+GLfloat yrot;   // y rotation
 GLfloat xspeed; // x rotation speed
 GLfloat yspeed; // y rotation speed
 
@@ -94,43 +94,44 @@ void detect_and_draw( )
 
 	double t = (double)cvGetTickCount();
 
-	int detectedHeadWidth,detectedHeadHeight;		
+	int detectedHeadWidth,detectedHeadHeight;
 	int upperHeadX,upperHeadY;
 
-	ehciLoop(EHCI2DFACEDETECT,0);		
+	ehciLoop(EHCI2DFACEDETECT,0);
 	getHeadBounds(&upperHeadX,&upperHeadY,&detectedHeadWidth,&detectedHeadHeight );
 	CvPoint upperHeadCorner;
 	upperHeadCorner.x = upperHeadX;
 	upperHeadCorner.y = upperHeadY;
-	    
+
 	double angle = detectedHeadWidth * horizontalGradesPerPixel * 3.141592654/180;
 	headDist = (headWidth/2) / (tan(angle/2)); //in meters
 
-	    for(int i=MEANWINDOW-1;i>0;i--)
+	for(int i=MEANWINDOW-1;i>0;i--)
 		headHist[i]=headHist[i-1];
-	    headHist[0]=headDist;
-	    double headMean=0;
-	    for(int i=0;i<MEANWINDOW;i++) headMean+=headHist[i];
-	    headDist=headMean/MEANWINDOW;
+
+	headHist[0]=headDist;
+	double headMean=0;
+	for(int i=0;i<MEANWINDOW;i++) headMean+=headHist[i];
+	headDist=headMean/MEANWINDOW;
 
 	double xAngle = ((640)/2.0 - (upperHeadCorner.x+detectedHeadWidth/2)) * horizontalGradesPerPixel * 3.141592654/180;
-	headX =  tan(xAngle) * headDist;
+	headX =-(  tan(xAngle) * headDist);
 	double yAngle = ((480)/2.0 -(upperHeadCorner.y+detectedHeadHeight/2)) * verticalGradesPerPixel * 3.141592654/180;
 	headY = tan(yAngle) * headDist;
-	
+
 }
 
 
 
 
-// quick and dirty bitmap loader...for 24 bit bitmaps with 1 plane only.  
+// quick and dirty bitmap loader...for 24 bit bitmaps with 1 plane only.
 // See http://www.dcs.ed.ac.uk/~mxr/gfx/2d/BMP.txt for more info.
 // if mesa ever gets glaux, let me know.
 int ImageLoad(char *filename, Image *image) {
     FILE *file;
     unsigned long size;                 // size of the image in bytes.
     unsigned long i;                    // standard counter.
-    unsigned short int planes;          // number of planes in image (must be 1) 
+    unsigned short int planes;          // number of planes in image (must be 1)
     unsigned short int bpp;             // number of bits per pixel (must be 24)
     char temp;                          // used to convert bgr to rgb color.
 
@@ -140,7 +141,7 @@ int ImageLoad(char *filename, Image *image) {
 	printf("File Not Found : %s\n",filename);
 	return 0;
     }
-    
+
     // seek through the bmp header, up to the width/height:
     fseek(file, 18, SEEK_CUR);
 
@@ -149,14 +150,14 @@ int ImageLoad(char *filename, Image *image) {
 	printf("Error reading width from %s.\n", filename);
 	return 0;
     }
-    
-    
-    // read the height 
+
+
+    // read the height
     if ((i = fread(&image->sizeY, 4, 1, file)) != 1) {
 	printf("Error reading height from %s.\n", filename);
 	return 0;
     }
-    
+
     // calculate the size (assuming 24 bits or 3 bytes per pixel).
     size = image->sizeX * image->sizeY * 3;
 
@@ -179,15 +180,15 @@ int ImageLoad(char *filename, Image *image) {
 	printf("Bpp from %s is not 24: %u\n", filename, bpp);
 	return 0;
     }
-	
+
     // seek past the rest of the bitmap header.
     fseek(file, 24, SEEK_CUR);
 
-    // read the data. 
+    // read the data.
     image->data = (char *) malloc(size);
     if (image->data == NULL) {
 	printf("Error allocating memory for color-corrected image data");
-	return 0;	
+	return 0;
     }
 
     if ((i = fread(image->data, size, 1, file)) != 1) {
@@ -206,10 +207,10 @@ int ImageLoad(char *filename, Image *image) {
 }
 
 // Load Bitmaps And Convert To Textures
-void LoadGLTextures(void) {	
+void LoadGLTextures(void) {
     // Load Texture
     Image *image1;
-    
+
     // allocate space for texture
     image1 = (Image *) malloc(sizeof(Image));
     if (image1 == NULL) {
@@ -219,9 +220,9 @@ void LoadGLTextures(void) {
 
     if (!ImageLoad("data/crate.bmp", image1)) {
 	exit(1);
-    }        
+    }
 
-    // Create Textures	
+    // Create Textures
     glGenTextures(3, &texture[0]);
 
     // texture 1 (poor quality scaling)
@@ -230,7 +231,7 @@ void LoadGLTextures(void) {
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST); // cheap scaling when image bigger than texture
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST); // cheap scaling when image smalled than texture
 
-    // 2d texture, level of detail 0 (normal), 3 components (red, green, blue), x size from image, y size from image, 
+    // 2d texture, level of detail 0 (normal), 3 components (red, green, blue), x size from image, y size from image,
     // border 0 (normal), rgb color data, unsigned byte data, and finally the data itself.
     glTexImage2D(GL_TEXTURE_2D, 0, 3, image1->sizeX, image1->sizeY, 0, GL_RGB, GL_UNSIGNED_BYTE, image1->data);
 
@@ -247,7 +248,7 @@ void LoadGLTextures(void) {
     glTexImage2D(GL_TEXTURE_2D, 0, 3, image1->sizeX, image1->sizeY, 0, GL_RGB, GL_UNSIGNED_BYTE, image1->data);
 
     // 2d texture, 3 colors, width, height, RGB in that order, byte data, and the data.
-    gluBuild2DMipmaps(GL_TEXTURE_2D, 3, image1->sizeX, image1->sizeY, GL_RGB, GL_UNSIGNED_BYTE, image1->data); 
+    gluBuild2DMipmaps(GL_TEXTURE_2D, 3, image1->sizeX, image1->sizeY, GL_RGB, GL_UNSIGNED_BYTE, image1->data);
 };
 
 /* A general OpenGL initialization function.  Sets all of the initial parameters. */
@@ -261,12 +262,12 @@ void InitGL(GLsizei Width, GLsizei Height)	// We call this right after our OpenG
     glDepthFunc(GL_LESS);			// The Type Of Depth Test To Do
     glEnable(GL_DEPTH_TEST);			// Enables Depth Testing
     glShadeModel(GL_SMOOTH);			// Enables Smooth Color Shading
-    
+
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();				// Reset The Projection Matrix
-    
+
     gluPerspective(45.0f,(GLfloat)Width/(GLfloat)Height,0.1f,100.0f);	// Calculate The Aspect Ratio Of The Window
-    
+
     glMatrixMode(GL_MODELVIEW);
 
     // set up light number 1.
@@ -298,7 +299,7 @@ void DrawGLScene(void)
 
 	detect_and_draw( );
 
-  
+
   double normX = 3*headX;//(float) (( headX - 320)/320.0);
   double normY = 3*headY;//(float) (( headY - 240)/320.0);
 //printf("Head x = %lf Head y = %lf\n",normX,normY);
@@ -311,207 +312,207 @@ void DrawGLScene(void)
     gluLookAt(5*normX, 7*normY, 1 + 5*headDist , 0, 0, 0, 0, 1, 0); //+ 5*headDist
 
     glTranslatef(0.0f,0.0f,-1);                  // move z units out from the screen.
-    
+
     glRotatef(xrot,1.0f,0.0f,0.0f);		// Rotate On The X Axis
     glRotatef(yrot,0.0f,1.0f,0.0f);		// Rotate On The Y Axis
 
     glBindTexture(GL_TEXTURE_2D, texture[filter]);   // choose the texture to use.
 
     glBegin(GL_QUADS);		                // begin drawing a cube
-    
+
     // Front Face (note that the texture's corners have to match the quad's corners)
     glNormal3f( 0.0f, 0.0f, 1.0f);                              // front face points out of the screen on z.
     glTexCoord2f(0.0f, 0.0f); glVertex3f(-1.0f, -1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
     glTexCoord2f(1.0f, 0.0f); glVertex3f( 1.0f, -1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
     glTexCoord2f(1.0f, 1.0f); glVertex3f( 1.0f,  1.0f,  1.0f);	// Top Right Of The Texture and Quad
     glTexCoord2f(0.0f, 1.0f); glVertex3f(-1.0f,  1.0f,  1.0f);	// Top Left Of The Texture and Quad
-  
+
     // Back Face
     glNormal3f( 0.0f, 0.0f,-1.0f);                              // back face points into the screen on z.
     glTexCoord2f(1.0f, 0.0f); glVertex3f(-1.0f, -1.0f, -1.0f);	// Bottom Right Of The Texture and Quad
     glTexCoord2f(1.0f, 1.0f); glVertex3f(-1.0f,  1.0f, -1.0f);	// Top Right Of The Texture and Quad
     glTexCoord2f(0.0f, 1.0f); glVertex3f( 1.0f,  1.0f, -1.0f);	// Top Left Of The Texture and Quad
     glTexCoord2f(0.0f, 0.0f); glVertex3f( 1.0f, -1.0f, -1.0f);	// Bottom Left Of The Texture and Quad
-	
+
     // Top Face
     glNormal3f( 0.0f, 1.0f, 0.0f);                              // top face points up on y.
     glTexCoord2f(0.0f, 1.0f); glVertex3f(-1.0f,  1.0f, -1.0f);	// Top Left Of The Texture and Quad
     glTexCoord2f(0.0f, 0.0f); glVertex3f(-1.0f,  1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
     glTexCoord2f(1.0f, 0.0f); glVertex3f( 1.0f,  1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
     glTexCoord2f(1.0f, 1.0f); glVertex3f( 1.0f,  1.0f, -1.0f);	// Top Right Of The Texture and Quad
-    
-    // Bottom Face       
-    glNormal3f( 0.0f, -1.0f, 0.0f);                             // bottom face points down on y. 
+
+    // Bottom Face
+    glNormal3f( 0.0f, -1.0f, 0.0f);                             // bottom face points down on y.
     glTexCoord2f(1.0f, 1.0f); glVertex3f(-1.0f, -1.0f, -1.0f);	// Top Right Of The Texture and Quad
     glTexCoord2f(0.0f, 1.0f); glVertex3f( 1.0f, -1.0f, -1.0f);	// Top Left Of The Texture and Quad
     glTexCoord2f(0.0f, 0.0f); glVertex3f( 1.0f, -1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
     glTexCoord2f(1.0f, 0.0f); glVertex3f(-1.0f, -1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
-    
+
     // Right face
     glNormal3f( 1.0f, 0.0f, 0.0f);                              // right face points right on x.
     glTexCoord2f(1.0f, 0.0f); glVertex3f( 1.0f, -1.0f, -1.0f);	// Bottom Right Of The Texture and Quad
     glTexCoord2f(1.0f, 1.0f); glVertex3f( 1.0f,  1.0f, -1.0f);	// Top Right Of The Texture and Quad
     glTexCoord2f(0.0f, 1.0f); glVertex3f( 1.0f,  1.0f,  1.0f);	// Top Left Of The Texture and Quad
     glTexCoord2f(0.0f, 0.0f); glVertex3f( 1.0f, -1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
-    
+
     // Left Face
     glNormal3f(-1.0f, 0.0f, 0.0f);                              // left face points left on x.
     glTexCoord2f(0.0f, 0.0f); glVertex3f(-1.0f, -1.0f, -1.0f);	// Bottom Left Of The Texture and Quad
     glTexCoord2f(1.0f, 0.0f); glVertex3f(-1.0f, -1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
     glTexCoord2f(1.0f, 1.0f); glVertex3f(-1.0f,  1.0f,  1.0f);	// Top Right Of The Texture and Quad
     glTexCoord2f(0.0f, 1.0f); glVertex3f(-1.0f,  1.0f, -1.0f);	// Top Left Of The Texture and Quad
-    
+
     glEnd();                                    // done with the polygon.
 
     glTranslatef(-3.0f, 0.0f,0);                  // move z units out from the screen.
 
     glBegin(GL_QUADS);		                // begin drawing a cube
-    
+
     // Front Face (note that the texture's corners have to match the quad's corners)
     glNormal3f( 0.0f, 0.0f, 1.0f);                              // front face points out of the screen on z.
     glTexCoord2f(0.0f, 0.0f); glVertex3f(-1.0f, -1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
     glTexCoord2f(1.0f, 0.0f); glVertex3f( 1.0f, -1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
     glTexCoord2f(1.0f, 1.0f); glVertex3f( 1.0f,  1.0f,  1.0f);	// Top Right Of The Texture and Quad
     glTexCoord2f(0.0f, 1.0f); glVertex3f(-1.0f,  1.0f,  1.0f);	// Top Left Of The Texture and Quad
-    
+
     // Back Face
     glNormal3f( 0.0f, 0.0f,-1.0f);                              // back face points into the screen on z.
     glTexCoord2f(1.0f, 0.0f); glVertex3f(-1.0f, -1.0f, -1.0f);	// Bottom Right Of The Texture and Quad
     glTexCoord2f(1.0f, 1.0f); glVertex3f(-1.0f,  1.0f, -1.0f);	// Top Right Of The Texture and Quad
     glTexCoord2f(0.0f, 1.0f); glVertex3f( 1.0f,  1.0f, -1.0f);	// Top Left Of The Texture and Quad
     glTexCoord2f(0.0f, 0.0f); glVertex3f( 1.0f, -1.0f, -1.0f);	// Bottom Left Of The Texture and Quad
-	
+
     // Top Face
     glNormal3f( 0.0f, 1.0f, 0.0f);                              // top face points up on y.
     glTexCoord2f(0.0f, 1.0f); glVertex3f(-1.0f,  1.0f, -1.0f);	// Top Left Of The Texture and Quad
     glTexCoord2f(0.0f, 0.0f); glVertex3f(-1.0f,  1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
     glTexCoord2f(1.0f, 0.0f); glVertex3f( 1.0f,  1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
     glTexCoord2f(1.0f, 1.0f); glVertex3f( 1.0f,  1.0f, -1.0f);	// Top Right Of The Texture and Quad
-    
-    // Bottom Face       
-    glNormal3f( 0.0f, -1.0f, 0.0f);                             // bottom face points down on y. 
+
+    // Bottom Face
+    glNormal3f( 0.0f, -1.0f, 0.0f);                             // bottom face points down on y.
     glTexCoord2f(1.0f, 1.0f); glVertex3f(-1.0f, -1.0f, -1.0f);	// Top Right Of The Texture and Quad
     glTexCoord2f(0.0f, 1.0f); glVertex3f( 1.0f, -1.0f, -1.0f);	// Top Left Of The Texture and Quad
     glTexCoord2f(0.0f, 0.0f); glVertex3f( 1.0f, -1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
     glTexCoord2f(1.0f, 0.0f); glVertex3f(-1.0f, -1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
-    
+
     // Right face
     glNormal3f( 1.0f, 0.0f, 0.0f);                              // right face points right on x.
     glTexCoord2f(1.0f, 0.0f); glVertex3f( 1.0f, -1.0f, -1.0f);	// Bottom Right Of The Texture and Quad
     glTexCoord2f(1.0f, 1.0f); glVertex3f( 1.0f,  1.0f, -1.0f);	// Top Right Of The Texture and Quad
     glTexCoord2f(0.0f, 1.0f); glVertex3f( 1.0f,  1.0f,  1.0f);	// Top Left Of The Texture and Quad
     glTexCoord2f(0.0f, 0.0f); glVertex3f( 1.0f, -1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
-    
+
     // Left Face
     glNormal3f(-1.0f, 0.0f, 0.0f);                              // left face points left on x.
     glTexCoord2f(0.0f, 0.0f); glVertex3f(-1.0f, -1.0f, -1.0f);	// Bottom Left Of The Texture and Quad
     glTexCoord2f(1.0f, 0.0f); glVertex3f(-1.0f, -1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
     glTexCoord2f(1.0f, 1.0f); glVertex3f(-1.0f,  1.0f,  1.0f);	// Top Right Of The Texture and Quad
     glTexCoord2f(0.0f, 1.0f); glVertex3f(-1.0f,  1.0f, -1.0f);	// Top Left Of The Texture and Quad
-    
+
     glEnd();                                    // done with the polygon.
 
-    // 
+    //
 
     glTranslatef(+6.0f, 0.0f,0);                  // move z units out from the screen.
 
     glBegin(GL_QUADS);		                // begin drawing a cube
-    
+
     // Front Face (note that the texture's corners have to match the quad's corners)
     glNormal3f( 0.0f, 0.0f, 1.0f);                              // front face points out of the screen on z.
     glTexCoord2f(0.0f, 0.0f); glVertex3f(-1.0f, -1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
     glTexCoord2f(1.0f, 0.0f); glVertex3f( 1.0f, -1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
     glTexCoord2f(1.0f, 1.0f); glVertex3f( 1.0f,  1.0f,  1.0f);	// Top Right Of The Texture and Quad
     glTexCoord2f(0.0f, 1.0f); glVertex3f(-1.0f,  1.0f,  1.0f);	// Top Left Of The Texture and Quad
-    
+
     // Back Face
     glNormal3f( 0.0f, 0.0f,-1.0f);                              // back face points into the screen on z.
     glTexCoord2f(1.0f, 0.0f); glVertex3f(-1.0f, -1.0f, -1.0f);	// Bottom Right Of The Texture and Quad
     glTexCoord2f(1.0f, 1.0f); glVertex3f(-1.0f,  1.0f, -1.0f);	// Top Right Of The Texture and Quad
     glTexCoord2f(0.0f, 1.0f); glVertex3f( 1.0f,  1.0f, -1.0f);	// Top Left Of The Texture and Quad
     glTexCoord2f(0.0f, 0.0f); glVertex3f( 1.0f, -1.0f, -1.0f);	// Bottom Left Of The Texture and Quad
-	
+
     // Top Face
     glNormal3f( 0.0f, 1.0f, 0.0f);                              // top face points up on y.
     glTexCoord2f(0.0f, 1.0f); glVertex3f(-1.0f,  1.0f, -1.0f);	// Top Left Of The Texture and Quad
     glTexCoord2f(0.0f, 0.0f); glVertex3f(-1.0f,  1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
     glTexCoord2f(1.0f, 0.0f); glVertex3f( 1.0f,  1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
     glTexCoord2f(1.0f, 1.0f); glVertex3f( 1.0f,  1.0f, -1.0f);	// Top Right Of The Texture and Quad
-    
-    // Bottom Face       
-    glNormal3f( 0.0f, -1.0f, 0.0f);                             // bottom face points down on y. 
+
+    // Bottom Face
+    glNormal3f( 0.0f, -1.0f, 0.0f);                             // bottom face points down on y.
     glTexCoord2f(1.0f, 1.0f); glVertex3f(-1.0f, -1.0f, -1.0f);	// Top Right Of The Texture and Quad
     glTexCoord2f(0.0f, 1.0f); glVertex3f( 1.0f, -1.0f, -1.0f);	// Top Left Of The Texture and Quad
     glTexCoord2f(0.0f, 0.0f); glVertex3f( 1.0f, -1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
     glTexCoord2f(1.0f, 0.0f); glVertex3f(-1.0f, -1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
-    
+
     // Right face
     glNormal3f( 1.0f, 0.0f, 0.0f);                              // right face points right on x.
     glTexCoord2f(1.0f, 0.0f); glVertex3f( 1.0f, -1.0f, -1.0f);	// Bottom Right Of The Texture and Quad
     glTexCoord2f(1.0f, 1.0f); glVertex3f( 1.0f,  1.0f, -1.0f);	// Top Right Of The Texture and Quad
     glTexCoord2f(0.0f, 1.0f); glVertex3f( 1.0f,  1.0f,  1.0f);	// Top Left Of The Texture and Quad
     glTexCoord2f(0.0f, 0.0f); glVertex3f( 1.0f, -1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
-    
+
     // Left Face
     glNormal3f(-1.0f, 0.0f, 0.0f);                              // left face points left on x.
     glTexCoord2f(0.0f, 0.0f); glVertex3f(-1.0f, -1.0f, -1.0f);	// Bottom Left Of The Texture and Quad
     glTexCoord2f(1.0f, 0.0f); glVertex3f(-1.0f, -1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
     glTexCoord2f(1.0f, 1.0f); glVertex3f(-1.0f,  1.0f,  1.0f);	// Top Right Of The Texture and Quad
     glTexCoord2f(0.0f, 1.0f); glVertex3f(-1.0f,  1.0f, -1.0f);	// Top Left Of The Texture and Quad
-    
+
     glEnd();                                    // done with the polygon.
 
     glTranslatef(0.0f, 0.0f,3.0);                  // move z units out from the screen.
 
     glBegin(GL_QUADS);		                // begin drawing a cube
-    
+
     // Front Face (note that the texture's corners have to match the quad's corners)
     glNormal3f( 0.0f, 0.0f, 1.0f);                              // front face points out of the screen on z.
     glTexCoord2f(0.0f, 0.0f); glVertex3f(-1.0f, -1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
     glTexCoord2f(1.0f, 0.0f); glVertex3f( 1.0f, -1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
     glTexCoord2f(1.0f, 1.0f); glVertex3f( 1.0f,  1.0f,  1.0f);	// Top Right Of The Texture and Quad
     glTexCoord2f(0.0f, 1.0f); glVertex3f(-1.0f,  1.0f,  1.0f);	// Top Left Of The Texture and Quad
-    
+
     // Back Face
     glNormal3f( 0.0f, 0.0f,-1.0f);                              // back face points into the screen on z.
     glTexCoord2f(1.0f, 0.0f); glVertex3f(-1.0f, -1.0f, -1.0f);	// Bottom Right Of The Texture and Quad
     glTexCoord2f(1.0f, 1.0f); glVertex3f(-1.0f,  1.0f, -1.0f);	// Top Right Of The Texture and Quad
     glTexCoord2f(0.0f, 1.0f); glVertex3f( 1.0f,  1.0f, -1.0f);	// Top Left Of The Texture and Quad
     glTexCoord2f(0.0f, 0.0f); glVertex3f( 1.0f, -1.0f, -1.0f);	// Bottom Left Of The Texture and Quad
-	
+
     // Top Face
     glNormal3f( 0.0f, 1.0f, 0.0f);                              // top face points up on y.
     glTexCoord2f(0.0f, 1.0f); glVertex3f(-1.0f,  1.0f, -1.0f);	// Top Left Of The Texture and Quad
     glTexCoord2f(0.0f, 0.0f); glVertex3f(-1.0f,  1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
     glTexCoord2f(1.0f, 0.0f); glVertex3f( 1.0f,  1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
     glTexCoord2f(1.0f, 1.0f); glVertex3f( 1.0f,  1.0f, -1.0f);	// Top Right Of The Texture and Quad
-    
-    // Bottom Face       
-    glNormal3f( 0.0f, -1.0f, 0.0f);                             // bottom face points down on y. 
+
+    // Bottom Face
+    glNormal3f( 0.0f, -1.0f, 0.0f);                             // bottom face points down on y.
     glTexCoord2f(1.0f, 1.0f); glVertex3f(-1.0f, -1.0f, -1.0f);	// Top Right Of The Texture and Quad
     glTexCoord2f(0.0f, 1.0f); glVertex3f( 1.0f, -1.0f, -1.0f);	// Top Left Of The Texture and Quad
     glTexCoord2f(0.0f, 0.0f); glVertex3f( 1.0f, -1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
     glTexCoord2f(1.0f, 0.0f); glVertex3f(-1.0f, -1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
-    
+
     // Right face
     glNormal3f( 1.0f, 0.0f, 0.0f);                              // right face points right on x.
     glTexCoord2f(1.0f, 0.0f); glVertex3f( 1.0f, -1.0f, -1.0f);	// Bottom Right Of The Texture and Quad
     glTexCoord2f(1.0f, 1.0f); glVertex3f( 1.0f,  1.0f, -1.0f);	// Top Right Of The Texture and Quad
     glTexCoord2f(0.0f, 1.0f); glVertex3f( 1.0f,  1.0f,  1.0f);	// Top Left Of The Texture and Quad
     glTexCoord2f(0.0f, 0.0f); glVertex3f( 1.0f, -1.0f,  1.0f);	// Bottom Left Of The Texture and Quad
-    
+
     // Left Face
     glNormal3f(-1.0f, 0.0f, 0.0f);                              // left face points left on x.
     glTexCoord2f(0.0f, 0.0f); glVertex3f(-1.0f, -1.0f, -1.0f);	// Bottom Left Of The Texture and Quad
     glTexCoord2f(1.0f, 0.0f); glVertex3f(-1.0f, -1.0f,  1.0f);	// Bottom Right Of The Texture and Quad
     glTexCoord2f(1.0f, 1.0f); glVertex3f(-1.0f,  1.0f,  1.0f);	// Top Right Of The Texture and Quad
     glTexCoord2f(0.0f, 1.0f); glVertex3f(-1.0f,  1.0f, -1.0f);	// Top Left Of The Texture and Quad
-    
+
     glEnd();                                    // done with the polygon.
 
 
 
-    //    xrot+=xspeed;		                // X Axis Rotation	
+    //    xrot+=xspeed;		                // X Axis Rotation
     yrot+=yspeed;		                // Y Axis Rotation
 
     // since this is double buffered, swap the buffers to display what just got drawn.
@@ -523,21 +524,21 @@ void DrawGLScene(void)
 
 
 /* The function called whenever a normal key is pressed. */
-void keyPressed(unsigned char key, int x, int y) 
+void keyPressed(unsigned char key, int x, int y)
 {
     /* avoid thrashing this procedure */
     usleep(100);
 
-    switch (key) {    
+    switch (key) {
     case ESCAPE: // kill everything.
 	/* shut down our window */
-	glutDestroyWindow(window); 
-	
+	glutDestroyWindow(window);
+
 	/* exit the program...normal termination. */
-	exit(1);                   	
+	exit(1);
 	break; // redundant.
 
-    case 76: 
+    case 76:
     case 108: // switch the lighting.
 	printf("L/l pressed; light is: %d\n", light);
 	light = light ? 0 : 1;              // switch the current value of light, between 0 and 1.
@@ -554,27 +555,27 @@ void keyPressed(unsigned char key, int x, int y)
 	printf("F/f pressed; filter is: %d\n", filter);
 	filter+=1;
 	if (filter>2) {
-	    filter=0;	
-	}	
+	    filter=0;
+	}
 	printf("Filter is now: %d\n", filter);
 	break;
 
     default:
 	break;
-    }	
+    }
 }
 
 /* The function called whenever a normal key is pressed. */
-void specialKeyPressed(int key, int x, int y) 
+void specialKeyPressed(int key, int x, int y)
 {
     /* avoid thrashing this procedure */
     usleep(100);
 
-    switch (key) {    
+    switch (key) {
     case GLUT_KEY_PAGE_UP: // move the cube into the distance.
 	z-=0.02f;
 	break;
-    
+
     case GLUT_KEY_PAGE_DOWN: // move the cube closer.
 	z+=0.02f;
 	break;
@@ -590,42 +591,42 @@ void specialKeyPressed(int key, int x, int y)
     case GLUT_KEY_LEFT: // decrease y rotation speed;
 	yspeed-=0.01f;
 	break;
-    
+
     case GLUT_KEY_RIGHT: // increase y rotation speed;
 	yspeed+=0.01f;
 	break;
 
     default:
 	break;
-    }	
+    }
 }
 
-int main(int argc, char **argv) 
-{  
-    /* Initialize GLUT state - glut will take any command line arguments that pertain to it or 
-       X Windows - look at its documentation at http://reality.sgi.com/mjk/spec3/spec3.html */  
+int main(int argc, char **argv)
+{
+    /* Initialize GLUT state - glut will take any command line arguments that pertain to it or
+       X Windows - look at its documentation at http://reality.sgi.com/mjk/spec3/spec3.html */
     glutInit(&argc, argv);
-    
+
     ehciInit();
 
-    /* Select type of Display mode:   
-     Double buffer 
+    /* Select type of Display mode:
+     Double buffer
      RGBA color
-     Alpha components supported 
-     Depth buffer */  
-    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_ALPHA | GLUT_DEPTH);  
+     Alpha components supported
+     Depth buffer */
+    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_ALPHA | GLUT_DEPTH);
 
     /* get a 640 x 480 window */
-    glutInitWindowSize(640, 480);  
+    glutInitWindowSize(640, 480);
 
     /* the window starts at the upper left corner of the screen */
-    glutInitWindowPosition(0, 0);  
+    glutInitWindowPosition(0, 0);
 
-    /* Open a window */  
+    /* Open a window */
     window = glutCreateWindow("3d View Head Track OpenGL - Daniel Lelis Baggio");
 
     /* Register the function to do all our OpenGL drawing. */
-    glutDisplayFunc(&DrawGLScene);  
+    glutDisplayFunc(&DrawGLScene);
 
     /* Go fullscreen.  This is as soon as possible. */
     glutFullScreen();
@@ -644,9 +645,9 @@ int main(int argc, char **argv)
 
     /* Initialize our window. */
     InitGL(640, 480);
-    
-    /* Start Event Processing Engine */  
-    glutMainLoop();  
+
+    /* Start Event Processing Engine */
+    glutMainLoop();
 
     return 1;
 }
