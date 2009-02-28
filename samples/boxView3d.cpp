@@ -115,7 +115,7 @@ void detect_and_draw( )
 	headDist=headMean/MEANWINDOW;
 
 	double xAngle = ((640)/2.0 - (upperHeadCorner.x+detectedHeadWidth/2)) * horizontalGradesPerPixel * 3.141592654/180;
-	headX =-(  tan(xAngle) * headDist);
+	headX =(  tan(xAngle) * headDist);
 	double yAngle = ((480)/2.0 -(upperHeadCorner.y+detectedHeadHeight/2)) * verticalGradesPerPixel * 3.141592654/180;
 	headY = tan(yAngle) * headDist;
 
@@ -309,7 +309,7 @@ void DrawGLScene(void)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);		// Clear The Screen And The Depth Buffer
     glLoadIdentity();				// Reset The View
 
-    gluLookAt(5*normX, 7*normY, 1 + 5*headDist , 0, 0, 0, 0, 1, 0); //+ 5*headDist
+    gluLookAt(-5*normX, 7*normY, 1 + 5*headDist , 0, 0, 0, 0, 1, 0); //+ 5*headDist
 
     glTranslatef(0.0f,0.0f,-1);                  // move z units out from the screen.
 
