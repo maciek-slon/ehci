@@ -632,10 +632,10 @@ void DrawGLScene(void)
 	//cvWaitKey(0);
 	int detected=0;
 	if(generatedImage){
-		detected = ehciLoop(EHCI6DFACEDETECTKEYFRAME,initialGuess,generatedImage);
+		detected = ehciLoop(EHCI6DFACEDETECT,initialGuess,generatedImage);
 	}
 	else{
-		detected= ehciLoop(EHCI6DFACEDETECTKEYFRAME,initialGuess);
+		detected= ehciLoop(EHCI6DFACEDETECT,initialGuess);
 	}
 	//detected= ehciLoop(EHCI6DFACEDETECT,initialGuess);
 
