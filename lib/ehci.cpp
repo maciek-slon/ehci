@@ -1417,7 +1417,7 @@ void ehciInit(){
 int ehciLoop(int mode,int initialGuess){
 
 	//main cvLoop, used to process events
-	//cvWaitKey(5);
+	cvWaitKey(5);
 	//cvWaitKey(0);
 
 
