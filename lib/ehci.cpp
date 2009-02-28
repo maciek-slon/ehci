@@ -1418,7 +1418,7 @@ int ehciLoop(int mode,int initialGuess){
 
 	//main cvLoop, used to process events
 	//cvWaitKey(5);
-	cvWaitKey(0);
+	//cvWaitKey(0);
 
 
 	static int numberOfTrackingPoints=0;
