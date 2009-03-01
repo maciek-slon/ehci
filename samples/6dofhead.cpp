@@ -101,7 +101,7 @@ void drawCentralAxis(){
 	cy = -.25 - deltaY;
 	cz = 1.0 - deltaZ;
 
-
+	glLineWidth(4.0);
 	glBegin(GL_LINES);
 	glColor3f(1.0f,0.0f,0.0);
 	glVertex3f( cx,cy,cz);
@@ -137,6 +137,7 @@ void drawCentralAxis(){
 	glVertex3f( cx,cy,cz);
 	glVertex3f( cx,cy,cz-5.0f);
 	glEnd();
+	glLineWidth(1.0);
 
 }
 void drawReferenceAxis(){
@@ -420,6 +421,7 @@ void drawHeadModel(float scale,int headWidth,int headHeight, int myRefX,int myRe
 
 		if(drawNormals){
 			glBegin(GL_LINES);
+
 				glColor3f(1.0f,0.0f,0.0);
 
 				glVertex3f(	scale* (triangles[i].vert[0][0]+deltaX),
@@ -437,12 +439,15 @@ void drawHeadModel(float scale,int headWidth,int headHeight, int myRefX,int myRe
 		glBegin(GL_TRIANGLES);
 		glColor4d (1.0, 1.0, 1.0,0.65);
 
+
+
 		for(int j=0;j<3;j++){
 			glVertex3f(	scale* (triangles[i].vert[j][0])-deltaX,
 						scale* (triangles[i].vert[j][1])-deltaY,
 						scale* (triangles[i].vert[j][2])-deltaZ);
 		}
 		glEnd();
+
 	}
 
 
