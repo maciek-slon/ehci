@@ -1,4 +1,4 @@
-AC_INIT([ehci], [0.5], [http://code.google.com/p/ehci/issues/list],[ehci])
+AC_INIT([ehci], [0.6], [http://code.google.com/p/ehci/issues/list],[ehci])
 
 AC_CONFIG_SRCDIR([lib/ehci.cpp])
 
