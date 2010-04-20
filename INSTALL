@@ -4,7 +4,8 @@ Installation instructions for EHCI 0.4
 In order to install the library, go to the directory in which you've copied the ehci-0.4.tar.gz and issue the following commands:
 
   % tar xvfz ehci-0.4.tar.gz
-  % cd ehci-0.4             
+  % cd ehci-0.4  
+  % autoreconf --install           
   % ./configure             
   % make      
 Now, log as super user, go to the ehci-0.4 directory and run              
