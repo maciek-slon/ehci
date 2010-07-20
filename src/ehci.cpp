@@ -384,7 +384,8 @@ double getDistanceThreshold(CvMat Ma,CvMat Mp,CvMat* Mpoints,CvMat Mlook,int NUM
 
 	double errorSum = 0;
 	//printf("Distances\n");
-	for(int w=0;w<NUMPTS;w++){ //ver o problema com o numpts e imagePoints.size()
+	//for(int w=0;w<NUMPTS;w++){ //ver o problema com o numpts e imagePoints.size()
+	for(int w=0;w<imagePoints.size();w++){ 
 		cvMatMul(&Ma,&Mpoints[w],Mr1);
 		cvMatMul(&Mp,Mr1,Mr1);
 
@@ -404,7 +405,7 @@ double getDistanceThreshold(CvMat Ma,CvMat Mp,CvMat* Mpoints,CvMat Mlook,int NUM
 	//printf("\n");
 	double deviations = 0;
 	double meanError = errorSum/NUMPTS;
-	for(int i=0;i<NUMPTS;i++){
+	for(int i=0;i<imagePoints.size();i++){
 		deviations+=(distanceErrors[i]-meanError)*(distanceErrors[i]-meanError);
 	}
 	//printf("Deviations %lf numpts %d mean error %lf errorSum %lf\n",deviations, NUMPTS,meanError,errorSum);
@@ -493,7 +494,8 @@ double plot2dModel(CvMatr32f rotation_matrix,CvVect32f translation_vector,
 
 
 	//printf("new round\n");
-	for(w=0;w<NUMPTS;w++){
+	//	for(w=0;w<NUMPTS;w++){
+	for(w=0;w<imagePoints.size();w++){	
 		//fazendo tambem a mudanca de coordenada para o ponto 0
 		//printf("Obj %+3.2f %+3.2f %+3.2f ", objectPoints[w].x, objectPoints[w].y,objectPoints[w].z);
 		pontos[w][0] =  objectPoints[w].x - objectPoints[0].x;
@@ -556,7 +558,7 @@ double plot2dModel(CvMatr32f rotation_matrix,CvVect32f translation_vector,
 	//TODO: find out why some sigmas are nan
 
 	if(!   (((threshold) != (threshold)) ) ){ //checking if threshold is not isnan
-		for(w=0;w<NUMPTS;w++){
+		for(w=0;w<imagePoints.size();w++){
 			//for(w=0;w<=2;w++){
 			cvMatMul(&Ma,&Mpoints[w],Mr1);
 			cvMatMul(&Mp,Mr1,Mr1);
