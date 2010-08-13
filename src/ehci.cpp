@@ -1,6 +1,7 @@
 #include "ehci.h"
 using namespace std;
-
+extern "C"
+{
 
 //these values are overiden in case data/config.ini
 //is loaded with these values
@@ -24,7 +25,7 @@ int textureCreated = 0;
 
 IplImage *image = 0;
 vector<int> ransacDeleted;
-
+}
 
 int isEhciTextureCreated( ){
 	return textureCreated;
@@ -227,11 +228,13 @@ void updateGlPositMatrix(CvMatr32f rotation_matrix,CvVect32f translation_vector)
  *Copies currently detected posit matrix (translation and rotation)
  *in the openGl format to the parameter array
  */
-
+extern "C"
+{
 void getGlPositMatrix(double myGlPositMatrix[16]){
 	for(int i=0;i<16;i++)
 		myGlPositMatrix[i] = glPositMatrix[i];
 
+}
 }
 
 void setInitialRTMatrix(CvMatr32f rotation_matrix,CvVect32f translation_vector){
@@ -821,6 +824,7 @@ IplImage* getGeneratedImage(){
 void setGeneratedImage(IplImage* image){
 	generatedImage = image;
 }
+
 int ehciLoop(int mode,int initialGuess,IplImage* createdImage){
 	generatedImage = createdImage;
 	ehciLoop(mode,initialGuess);
@@ -1073,9 +1077,11 @@ IplImage* frame;
 /**
  * Returns last captured frame.
  */
+
 IplImage* getCurrentFrame(){
 	return frame;
 }
+
 
 
 CvCapture* capture = 0;
@@ -1269,7 +1275,7 @@ int update6dof(int headHeight, int headWidth,int initialGuess,int numberOfTracki
 			}
 			numberOfTrackingPoints = k;
 		}
-		else{
+		else if((mode == EHCI6DFACEDETECT) || (mode==EHCI6DHANDDETECT)){
 			//printf("First\n");
 			cvCalcOpticalFlowPyrLK( prev_grey, grey, prev_pyramid, pyramid,
 					points[0], points[1], numberOfTrackingPoints, cvSize(win_size,win_size), 3, status, 0,
@@ -1373,12 +1379,14 @@ void getReferenceHeadBounds(int* headRefX,int* headRefY,int* aLastHeadW,int* aLa
  * Head width and height are also given in pixels.
  *
  */
-
+extern "C"
+{
 void getHeadBounds(int* headRefX,int* headRefY,int* aLastHeadW,int* aLastHeadH){
 	*headRefX = myUpperHeadX;
 	*headRefY = myUpperHeadY;
 	*aLastHeadW = myHeadWidth;
 	*aLastHeadH = myHeadHeight;
+}
 }
 
 int readInt(char* value){
@@ -1470,11 +1478,13 @@ void ehciInit(){
 }
 
 
-
-int ehciLoop(int mode,int initialGuess){
+extern "C"
+{
+int ehciLoop(int mode,int initialGuess, int debug){
 
 	//main cvLoop, used to process events
-	cvWaitKey(5);
+	if(debug)
+		cvWaitKey(5);
 	//cvWaitKey(0);
 
 
@@ -1535,7 +1545,7 @@ int ehciLoop(int mode,int initialGuess){
 
 	cvCvtColor( image, grey, CV_BGR2GRAY );
 
-
+	
 	detectedHead = getObjectPosition(image, mode,&upperHeadCorner,&headWidth,&headHeight );
 
 	//TODO: refactor initialGuess code below to work with upperHandCorner, handWidth, and handHeight
@@ -1619,7 +1629,7 @@ int ehciLoop(int mode,int initialGuess){
 
 	int newNumberOfTrackingPoints=0;
 	if(initialGuess) { printf("Disabling\n");bootstrap=0;generatedImage=NULL;}
-	if((mode & EHCI6DFACEDETECT) || (mode & EHCI6DHANDDETECT)){
+	if((mode == EHCI6DFACEDETECT) || (mode == EHCI6DHANDDETECT)){
 		//numberOfTrackingPoints = update6dof(headHeight, headWidth, initialGuess,numberOfTrackingPoints,mode);
 		newNumberOfTrackingPoints = update6dof(headHeight, headWidth, initialGuess,numberOfTrackingPoints,mode);
 	}
@@ -1628,8 +1638,8 @@ int ehciLoop(int mode,int initialGuess){
 		newNumberOfTrackingPoints = update6dof(headHeight, headWidth, initialGuess,numberOfTrackingPoints,mode);
 	}
 
-
-	cvShowImage( "EHCI Window", image );
+	if(debug)
+		cvShowImage( "EHCI Window", image );
 
 	if(numberOfTrackingPoints<NUMPTS)
 		return 0;
@@ -1638,17 +1648,62 @@ int ehciLoop(int mode,int initialGuess){
 		return 1;
 	}
 }
+}
 
+
+extern "C"
+{
+EXPORT_API int updateTexture(void* colors, int width, int height){
+
+	if(getCurrentFrame==NULL){
+		return -2;		
+	}		
+	//safeguard
+	if(!colors)
+		return -1;
+	//grab frames
+	IplImage* currentFrame = getCurrentFrame();	
+
+	// Color structure in Unity is four RGBA floats
+	float* data = reinterpret_cast<float*>(colors);
+	
+	int frameRows = currentFrame->height;
+	int frameCols = currentFrame->width;
+			
+	for (int row=0;row<height;row++)
+	{
+		for (int col=0;col<width;col++)
+		{
+			if( row < frameRows && col < frameCols){
+				float* pixel = data + (row * width + col) * 4;
+				uchar* framePixel = (uchar*) ( currentFrame->imageData + (row * currentFrame->widthStep) + col *3);
+				pixel[0] = (float)framePixel[2]/255.0f;//faceTextureBuffer[ (faceTextureHeight-1-y)*3*faceTextureWidth+3*x+0]/255.0f;
+				pixel[1] = (float)framePixel[1]/255.0f;//faceTextureBuffer[ (faceTextureHeight-1-y)*3*faceTextureWidth+3*x+1]/255.0f;
+				pixel[2] = (float)framePixel[0]/255.0f;//faceTextureBuffer[ (faceTextureHeight-1-y)*3*faceTextureWidth+3*x+2]/255.0f;
+
+				if(pixel[0]+pixel[1]+pixel[2]==0) //is this a background pixel?
+					pixel[3]=0.0f;
+				else
+				pixel[3] = 1.0f; // A
+			}	
+		}
+	}
+	return 0;	
+}
+}
 
 /**
  * ehci cleanup code
  */
-void ehciExit(){
+extern "C"
+{
+	void ehciExit(){
 
-	cvDestroyWindow("EHCI Window");
-	cvReleaseCapture( &capture );
+		cvDestroyWindow("EHCI Window");
+		cvReleaseCapture( &capture );
+	}
+
 }
-
 
 /* This function is supposed to find the
  * translation vector to the origin, but does not
