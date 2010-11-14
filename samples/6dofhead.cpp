@@ -76,7 +76,7 @@ void drawHelpText(){
 	glColor3f(0.0f,0.0f,0.0f);
 
 	glRasterPos2f(10, 20);
-	const unsigned char text[100] ="Press I to reinitialize. You must focus this window\n(face the camera in a still position)";
+	const unsigned char text[100] ="Press \'I\' to reinitialize. You must focus this window\n(face the camera in a still position)";
 	for (int i = 0; i < 100; i++)
 	{
 		glutBitmapCharacter(font, text[i]);
@@ -619,20 +619,20 @@ void keyframeRelated(){
 
 char *data=NULL;
 
-void generateTexture(){
-	int dataPtr=640*480*3-1;
+void generateTexture(int width, int height){
+	int dataPtr=width*height*3-1;
 	if(data==NULL)
-		data = (char*) malloc(640*480*3);
+		data = (char*) malloc(width*height*3);
 
-	glReadPixels(0,0,640,480,GL_BGR_EXT, GL_UNSIGNED_BYTE, data);
+	glReadPixels(0,0,width,height,GL_BGR_EXT, GL_UNSIGNED_BYTE, data);
 	if(!getGeneratedImage()){
-		setGeneratedImage(cvCreateImage( cvSize( 640, 480 ),
+		setGeneratedImage(cvCreateImage( cvSize( width, height),
 				IPL_DEPTH_8U, 3));
 	}
 	//TODO: try to use the pointer for increased performance
 	//generatedImage->imageData = data;
 
-	for( int y=0; y<480; y++ ) {
+	for( int y=0; y<height; y++ ) {
 	  uchar* ptr = (uchar*) (
 	     getGeneratedImage()->imageData + y * getGeneratedImage()->widthStep
 	  );
@@ -649,6 +649,8 @@ void generateTexture(){
 /* The main drawing function. */
 void DrawGLScene(void)
 {
+	double width = 320.0f;
+	double height = 240.0f;
 	static int bootstrap = 0;
 	CvMatr32f rotation_matrix = new float[9];
 	CvVect32f translation_vector = new float[3];
@@ -656,10 +658,10 @@ void DrawGLScene(void)
 	//cvWaitKey(0);
 	int detected=0;
 	if(getGeneratedImage()){
-		detected = ehciLoop(EHCI6DFACEDETECT,initialGuess,getGeneratedImage());
+		detected = ehciLoop(EHCI6DFACEDETECT,initialGuess,getGeneratedImage(),width,height);
 	}
 	else{
-		detected= ehciLoop(EHCI6DFACEDETECT,initialGuess);
+		detected= ehciLoop(EHCI6DFACEDETECT,initialGuess,0,width, height);
 	}
 	//detected= ehciLoop(EHCI6DFACEDETECT,initialGuess);
 
@@ -749,7 +751,7 @@ void DrawGLScene(void)
 
 
 		if(bootstrap)
-			generateTexture();
+			generateTexture(320,240);
 
 
 		if(drawAxis){
@@ -853,8 +855,9 @@ void keyPressed(unsigned char key, int x, int y)
 /* A general OpenGL initialization function.  Sets all of the initial parameters. */
 void InitGL(GLsizei Width, GLsizei Height)	// We call this right after our OpenGL window is created.
 {
-
-	setGLProjectionMatrix(projectionMatrix);
+	double width = (double)Width;
+	double height = (double)Height;
+	setGLProjectionMatrix(projectionMatrix,width,height);
 
 
 	glEnable(GL_TEXTURE_2D);                    // Enable texture mapping.
@@ -913,14 +916,14 @@ void InitGL(GLsizei Width, GLsizei Height)	// We call this right after our OpenG
 
 }
 
-void openGLCustomInit(int argc, char** argv ){
+void openGLCustomInit(int argc, char** argv, double width, double height ){
 
 	glutInit(&argc, argv);
 
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_ALPHA | GLUT_DEPTH);
 
 	/* get a 640 x 480 window */
-	glutInitWindowSize(640, 480);
+	glutInitWindowSize(width, height);
 
 	/* the window starts at the upper left corner of the screen */
 	glutInitWindowPosition(500, 0);
@@ -948,7 +951,7 @@ void openGLCustomInit(int argc, char** argv ){
 	//    glutSpecialFunc(&specialKeyPressed);
 
 	/* Initialize our window. */
-	InitGL(640, 480);
+	InitGL(width, height);
 
 
 	/* Start Event Processing Engine */
@@ -966,7 +969,7 @@ int main( int argc, char** argv )
 //	cvNamedWindow( "6dofHead", 1 );
 	ehciInit();
 	atexit(ehciExit);
-	openGLCustomInit(argc,argv);
+	openGLCustomInit(argc,argv,320.0, 240.0);
 
 
 	//cvDestroyWindow("6dofHead");

@@ -25,7 +25,7 @@ int main(){
 		//initialize, when it is set to zero 
 		//and tells ehci to track when it is set to one
 		
-		ehciLoop(EHCI6DFACEDETECT,initialGuess);
+		ehciLoop(EHCI6DFACEDETECT,initialGuess,0,640.0, 480.0);
 		
 		//returns translation and rotation matrix in openGl format
 		getGlPositMatrix(glPositMatrix);

@@ -97,7 +97,7 @@ void detect_and_draw( )
 	int detectedHeadWidth,detectedHeadHeight;
 	int upperHeadX,upperHeadY;
 
-	ehciLoop(EHCI2DFACEDETECT,0);
+	ehciLoop(EHCI2DFACEDETECT,0,0,640.0, 480.0);
 	getHeadBounds(&upperHeadX,&upperHeadY,&detectedHeadWidth,&detectedHeadHeight );
 	CvPoint upperHeadCorner;
 	upperHeadCorner.x = upperHeadX;

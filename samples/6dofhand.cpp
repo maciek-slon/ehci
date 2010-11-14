@@ -375,7 +375,7 @@ void DrawGLScene(void)
 	double glPositMatrix[16];
 	//TODO: correct the constants 
 	//int detected = ehciLoop(EHCI6DHANDDETECT,initialGuess);
-	int detected = ehciLoop(12,initialGuess);
+	int detected = ehciLoop(12,initialGuess,0,640.0, 480.0);
 	
 	getReferenceHeadBounds(&headRefX,&headRefY,&aLastHeadW, &aLastHeadH);
 	
@@ -541,7 +541,9 @@ void keyPressed(unsigned char key, int x, int y)
 void InitGL(GLsizei Width, GLsizei Height)	// We call this right after our OpenGL window is created.
 {
 
-	setGLProjectionMatrix(projectionMatrix);
+	double width = (double)Width;
+	double height = (double)Height;
+	setGLProjectionMatrix(projectionMatrix,width,height);
 
 
 	glEnable(GL_TEXTURE_2D);                    // Enable texture mapping.

@@ -453,7 +453,7 @@ void DrawGLScene(void)
 	CvMatr32f rotation_matrix = new float[9];
 	CvVect32f translation_vector = new float[3];
 	double glPositMatrix[16];
-	int detected = ehciLoop(EHCI6DHANDDETECT,initialGuess);
+	int detected = ehciLoop(EHCI6DHANDDETECT,initialGuess,0,640.0, 480.0);
 	
 	getReferenceHeadBounds(&headRefX,&headRefY,&aLastHeadW, &aLastHeadH);
 	
@@ -646,8 +646,9 @@ void keyPressed(unsigned char key, int x, int y)
 /* A general OpenGL initialization function.  Sets all of the initial parameters. */
 void InitGL(GLsizei Width, GLsizei Height)	// We call this right after our OpenGL window is created.
 {
-
-	setGLProjectionMatrix(projectionMatrix);
+	double width = (double)Width;
+	double height = (double)Height;
+	setGLProjectionMatrix(projectionMatrix,width,height);
 
 
 	glEnable(GL_TEXTURE_2D);                    // Enable texture mapping.

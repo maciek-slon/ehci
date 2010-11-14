@@ -18,7 +18,7 @@ int main(){
 		//so that the frame could be grabbed and processed
 		//the EHCI2DFACEDETECT parameter tells ehci that only 2d detection will be
 		//made
-		ehciLoop(EHCI2DFACEDETECT,0);
+		ehciLoop(EHCI2DFACEDETECT,0,0,640.0,480.0);
 		getHeadBounds(&upperX,&upperY,&headWidth,&headHeight);
 		printf("Head Coordinates %3d %3d head width %3d height %3d (count%d) (Press Ctrl+C to finish)\n",
 				upperX,upperY,headWidth,headHeight,loopCount);
