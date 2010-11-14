@@ -63,19 +63,19 @@ DllExport void getPositMatrix(IplImage* myImage,int initialGuess, CvMatr32f rota
 DllExport int insertNewPoints(IplImage* grey, int headX,int headY,int width, int height,
 		CvPoint2D32f* points);
 
-DllExport void setGLProjectionMatrix(double projectionMatrix[16]);
+DllExport void setGLProjectionMatrix(double projectionMatrix[16],double width, double height);
 
 DllExport void ehciInit();
 extern "C"{
-EXPORT_API int ehciLoop(int mode, int initialGuess,int debug=0);
+EXPORT_API int ehciLoop(int mode, int initialGuess,int debug=0, double width=320.0f, double height=240.0f);
 EXPORT_API void ehciExit();
 EXPORT_API void getHeadBounds(int* headRefX,int* headRefY,int* aLastHeadW,int* aLastHeadH);
 EXPORT_API void getGlPositMatrix(double myGlPositMatrix[16]);
-EXPORT_API int updateTexture(void* colors, int width, int height);
+EXPORT_API int updateTexture(void* colors, int width=320, int height=240);
 
 }
 
-DllExport int ehciLoop(int mode,int initialGuess,IplImage* createdImage);
+DllExport int ehciLoop(int mode,int initialGuess,IplImage* createdImage, double width, double height);
 
 
 DllExport void getReferenceHeadBounds(int* headRefX,int* headRefY,int* aLastHeadW,int* aLastHeadH);
